@@ -1,0 +1,398 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Organize your codebase for agents — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body class="user-shell" data-page-shell="user"><header id="user-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="user-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents">Module 1: Organize your codebase for agents</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">Organize your codebase for agents</span></nav><nav class="cmp-context-bar-views"><a class="cmp-context-bar-view ui-chrome cmp-context-bar-view-current" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents">Unit</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src">Source</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/download/s01_main.zip">Download</a></nav></div></div> <main id="mod-unit" class="user-main ui-measure-read" data-product-case="User reads a Purchased Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 01</div><h1 id="mod-unit-title" class="ui-title">Organize your codebase for agents</h1><p id="mod-unit-summary" class="ui-gloss">Organize a codebase so a fresh agent discovers and loads the context it needs, progressively.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>I organize a codebase for the agents that will work in it. We are going to come back to the same repository over and over again. Each time, a fresh agent would need to re-discover relevant information, understand the task, and get to work using the proper tools.</p>
+
+<p>To make that work well, it helps to look at what an agent is doing underneath.</p>
+
+<h2 id="an-agent-builds-a-conversation">An agent builds a conversation</h2>
+
+<p>An agent or agentic harness might sound complicated. But under the hood that is still a code that concatenates context and makes calls to a large language model.</p>
+
+<p>Much of its work happens as a sequence: read the current context, decide what to do, call a tool, receive the result, and make another model call with that result in the conversation.</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/2026-10-08_wire_ANC_S01_-_Foundations_agent_under_the_hood.png" alt="" /></p>
+
+<p>The interface of Codex or Claude can hide this from us, but an <strong>agent session is essentially an ongoing conversation that progressively builds its context</strong>. Tool calls can run in parallel, and long conversations can be compacted, but this sequence is a useful way to think about how an agent gets its work done.</p>
+
+<blockquote>
+<p>Subagents are also a flavour of this workflow.</p>
+</blockquote>
+
+<p><strong>Things that we load early - shape decisions that follow</strong>:</p>
+
+<ul>
+<li>which files the agent opens</li>
+<li>what it considers a requirement</li>
+<li>how it decides that the work is complete.</li>
+</ul>
+
+<p>We want the relevant information to arrive before the decisions that depend on it.</p>
+
+<p>When businesses adopt systems built on LLMs, one of the things they worry about is hallucinations. In practice, I pay attention to three failure modes (Hallucination triggers) that still apply to the coding agents:</p>
+
+<ol>
+<li><strong>Not enough relevant information.</strong> The model has to work with gaps. It may make assumptions, go in circles, or produce something that does not fit the project.</li>
+<li><strong>Too much irrelevant information.</strong> The facts we need are mixed with noise, old decisions, and material that does not apply to the task.</li>
+<li><strong>A task that is too complicated.</strong> We need to split it into smaller pieces that the agent can handle and we can verify.</li>
+</ol>
+
+<p>These are useful things to look for when a model gets something wrong; they are not an exhaustive explanation of hallucinations. They matter for a single model call, and they also matter for an agent making a sequence of calls over a growing conversation.</p>
+
+<p>This is why I use <strong>progressive disclosure</strong>: load the relevant content as early as it is needed, and not much more. We can influence how the conversation develops by designing how the agent discovers the repository.</p>
+
+<p><em>In this Module unit I&rsquo;ll be talking mostly about the document side of the codebase structure for two reasons:</em></p>
+
+<ul>
+<li><em>Documents and instructions are the most impactful part of the codebase, they get loaded into the context first</em></li>
+<li><em>Code is important, but on a large scale it is less relevant than requirements and tests.</em></li>
+</ul>
+
+<p><em>Still, the source code for this unit includes full executable project, so that you can actually try running it and seeing how these document decisions influence the agent.</em></p>
+
+<h2 id="the-codebase-is-a-book">The codebase is a book</h2>
+
+<p>Codebase is a book, and each agentic session is a new reader opening it. So we need to optimize the codebase for catching up fast.</p>
+
+<p>This is where <code>docs</code> folder comes in. It acts as the index of the book. We control the names, the locations, and the instructions that tell the agent where to begin.</p>
+
+<p>In the sample repository, <code>AGENTS.md</code> is the entry point. It gives the agent a few core principles and tells it to start by running <code>tree docs</code>. It also names the documents to read for the product vision, accepted behavior, and implementation mentality. Instructions for more specific work are conditional: before writing documentation, for example, read <code>document_writing.md</code>.</p>
+
+<p>The first discovery step in the sample repo returns this:</p>
+
+<pre><code class="language-text">docs
+├── modes
+│   ├── document_writing.md
+│   ├── piecemeal_growth.md
+│   └── workbench_notes.md
+├── behavior.md
+├── product.md
+└── specifications.md
+</code></pre>
+
+<p>And here is how a similar tree looks in a real project:</p>
+
+<pre><code class="language-txt">docs
+├── conceptual_pyramid.md
+├── documentation_rules.md
+├── engineering
+│   ├── architecture.md
+│   ├── concepts.md
+│   ├── embedded_modules.md
+│   ├── event_sourcing.md
+│   └── request_runtime.md
+├── modes
+│   ├── feature_clause_writing.md
+│   ├── focused_specs.md
+│   ├── piecemeal_growth.md
+│   ├── product_discovery.md
+│   ├── ui_component_design.md
+│   ├── ui_design.md
+│   └── workbench_notes.md
+├── personas
+│   └── mira.md
+├── product
+│   ├── concepts.md
+│   ├── definition.md
+│   └── features
+│       ├── AGENTS.md
+│       ├── auth.md
+│       ├── emails.md
+│       └── modules.md
+├── tools
+│   ├── noteforth.md
+│   └── wire.md
+└── tree.py
+</code></pre>
+
+<p>This is a compact list of names and folders, it uses very few tokens. The agent can see what is available without loading the contents of every document.</p>
+
+<p>I try hard to keep <code>AGENTS.md</code> small because it is part of the recurring starting context. It establishes the working context and points into the repository. The details can be disclosed when they become relevant. This is why <code>tree docs</code> instruction works so well.</p>
+
+<blockquote>
+<p>A stable starting context can also benefit from prompt caching when the provider can reuse a matching prompt prefix. That can reduce processing cost and latency on repeat requests. <a href="https://developers.openai.com/api/docs/guides/prompt-caching">OpenAI&rsquo;s prompt caching guide</a> explains the mechanism.</p>
+</blockquote>
+
+<h2 id="what-do-i-put-in-agents-md">What do I put in AGENTS.md?</h2>
+
+<p>My aim is for <code>AGENTS.md</code> to fit on one screen. It contains the minimum that I want the agent to encounter first.</p>
+
+<p>The sample for this module starts with a compact preamble:</p>
+
+<pre><code class="language-md mod-src-excerpt">This is a workshop reservation app.   
+  
+This is a web app using HTMX + Unix + Go + SQLite + Event-driven Specs (HUGSES) with modular monolithic architecture and stack flattening.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/AGENTS.md?lines=3-5">Source: AGENTS.md, lines 3–5</a></p>
+<p>These keywords quickly give the agent an idea of the stack and my working preferences. I do not need to explain each technology there.</p>
+
+<p>Then come the <em>progressive disclosure</em> instructions we have just seen: run <code>tree docs</code>, read the product vision, read the accepted behavior, and load the implementation mentality. The tree provides the index, the instructions provide a few hints on what to load and why:</p>
+
+<pre><code class="language-md mod-src-excerpt">Always run `tree docs` at the beginning to get an overview of durable documents. Before changing documentation read `document_writing.md`.
+
+Read `product.md` for the product vision, `behavior.md` for the accepted contract, and `piecemeal_growth.md` for the implementation mentality.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/AGENTS.md?lines=9-11">Source: AGENTS.md, lines 9–11</a></p>
+<p>The rest establishes a few priorities that come from how I work with agents.</p>
+
+<h2 id="priorities-for-agents">Priorities for agents</h2>
+
+<p>These priorities come from how I work with agents. I do not want an agent inventing requirements, scaling for scenarios we do not have, or adding unit tests simply because unit tests can surely hurt nobody.</p>
+
+<h3 id="rule-1-do-not-multiply-noise">Rule 1: Do not multiply noise</h3>
+
+<p>Adding new text is less risky than removing text. It helps in thinking, and agents think by writing. So agents (Claude in particular) tend to add comments and explanations everywhere.</p>
+
+<p>And removing text is risky - because there is a chance that we could throw out important requirements.</p>
+
+<p>That means that code repositories tend to gradually keep on accumulating extra prose that will pollute contexts of all agentic session. I want to slow that process down. Hence the instruction to read <code>writing_documents.md</code> before changing anything. And that instruction tries to avoid the duplication and noise:</p>
+
+<pre><code class="language-md mod-src-excerpt">Follow the spirit of Unix when working with the documentation in `docs/` and comments:  
+  
+- document only things and surprises that would surprise an experienced engineer that knows all about NixOS, golang, Make and building web products like that.  
+- When asked to update `docs/` and comments - bring them in sync with the project, removing stale things, updating surprises and removing obvious things.  
+- Prefer descriptive filenames for files in `docs/`, for they are more explanatory when used with `tree docs`  
+- Assume that the reader knows how to use grep and follow the links. E.g. instead of documenting makefile step in markdown, just mention it, same with the code.  
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/docs/modes/document_writing.md?lines=3-8">Source: docs/modes/document_writing.md, lines 3–8</a></p>
+<p>I&rsquo;ll talk more about the Surprise/grep mindset below. For now just keep in mind that we pay attention to the <a href="https://en.wikipedia.org/wiki/Brandolini%27s_law">Brandolini&rsquo;s Law</a>, when designing docs for agents that literally spend energy on dealing with bullshit:</p>
+
+<blockquote>
+<p>The amount of energy needed to refute bullshit is an order of magnitude bigger than that needed to produce it.</p>
+</blockquote>
+
+<p>Good naming of documents (also variables and classes) addresses the same &ldquo;context noise is expensive&rdquo; problem once over, from a different angle.</p>
+
+<p><strong>A longer, descriptive filename is cheap compared with loading a document to discover what it is about</strong>. The file index (e.g. output of a <code>tree docs</code>) should give the agent or human enough information to make that choice.</p>
+
+<p>I introduce folders when there are enough files that grouping becomes useful. In my projects, the groups often include features, modes, personas and product documents. There is no need to create all of them in advance. Executable specifications live elsewhere, in <code>specs/</code>.</p>
+
+<p>Because the document tree is loaded at the start of the session, internal instructions can refer to a document by its filename in backticks when that name is unambiguous. Otherwise, use a repository-root-relative path. For example, I do not need a full Markdown link to <code>piecemeal_growth.md</code> when the agent has already seen where it lives.</p>
+
+<pre><code class="language-txt mod-src-excerpt">- Remember that full doc tree is always loaded in the context at the start of each session. So in instructions  refer to repository documents by filename in backticks when unambiguous in the doc tree, e.g. `prototype.md`. Otherwise use a repo-root-relative path without a leading slash, e.g. `docs/product/concepts.md`. Avoid Markdown links and `../` paths for these references.  
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/docs/modes/document_writing.md?lines=9-9">Source: docs/modes/document_writing.md, line 9</a></p>
+<p>I also keep a couple of personal writing preferences in <code>document_writing.md</code>: no manual line wrapping, and no tables unless asked. Hard wraps introduced around 80 characters were driving me crazy, so I wrote the rule once. Markdown tables are awkward for me to read without a renderer, so I prefer lists and prose. These are small instructions that keep the documents comfortable to work with.</p>
+
+<pre><code class="language-text mod-src-excerpt">- no manual wrapping of lines in MD files.  
+- no tables (unless asked)
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/docs/modes/document_writing.md?lines=10-11">Source: docs/modes/document_writing.md, lines 10–11</a></p>
+<h2 id="rule-2-tests-and-specs-are-sacred">Rule 2: Tests and specs are sacred</h2>
+
+<p>When working on projects I like to think of a pyramid of concepts that goes like this:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/2026-10-08_wire_ANC_S01_-_Foundations_Conceptual_Pyramid.png" alt="" /></p>
+
+<p>Most important things that go on the top usually have less content, are more important. I like even to write them by hand. This includes product vision or AGENTS.md. These are also the files that an agent tends to load first at the beginning of the conversation, thus applying their influence to every subsequent turn and decision.</p>
+
+<p>As we go down the pyramid we get deeper into the details like requirements and tests. Requirements describe in human text what we want to capture. Tests or executable specs allow verifying that mechanically.</p>
+
+<p>Code implementation sits at the bottom. If top of the pyramid is done correctly, then you could throw out the implementation and have agents rewrite that over the night.</p>
+
+<blockquote>
+<p>I know that first-hand, since we&rsquo;ve used to do that with a complex high-load e-commerce product in pre-ChatGPT era. Except humans were the ones rewriting the backend to meet new scalability standards. It works.</p>
+</blockquote>
+
+<p>We&rsquo;ll talk more about specs in later modules. The important part right now is this one: <strong>Tests/specs are more important than the code, they capture the requirements</strong>.</p>
+
+<p>This means that if agent writes or modifies a test without asking me first - it makes a decision that will have a lasting impact on the code. If that decision is wrong, it will cripple the codebase.</p>
+
+<p>Because of that:</p>
+
+<pre><code class="language-md mod-src-excerpt">Do not touch tests or executable specs without explicit permission. Tests and specs are requirements, when proposing one, explain the behavior it would freeze and its coupling to implementation.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/AGENTS.md?lines=15-15">Source: AGENTS.md, line 15</a></p>
+<h3 id="rule-3-don-t-invent-requirements">Rule 3: Don&rsquo;t invent requirements</h3>
+
+<p>There is more subtle problem with agents that stems from the fact that they are running on LLMs that had a ton of written material to learn from.</p>
+
+<p>These LLMs are like über-grandparents - they have seen a myriad of ways that things can go wrong. So naturally they want to protect us from the consequences at any possible way. This can be worth it when doing a security audit. When working on a prototype or drafting a feature - it will get in the way.</p>
+
+<p>This is why I have a carefully crafted vector that I explicitly ask agent to load when working on the implementation - piecemeal growth or &ldquo;don&rsquo;t solve the problems that I don&rsquo;t have yet&rdquo;.</p>
+
+<p>In the source code it reads as:</p>
+
+<pre><code class="language-md mod-src-excerpt"># Mode: Piecemeal Growth  
+  
+Piecemeal growth designs from forces that exist now: executable requirements, current workflows, and failures that have actually occurred. Like a desire path, the shape follows observed traffic; it is not paved in anticipation of journeys nobody has taken.  
+  
+In this mode, keep the implementation as narrow as the present contract. Do not add configurability, concurrency, fallback paths, validation, or abstractions for possible future uses. Make assumptions explicit and let violations fail loudly, so new pressure is visible instead of being absorbed by speculative machinery.  
+  
+When a new requirement or repeated failure appears, repair the design locally. Generalize only once reality has shown what the generalization must support.  
+  
+This is not an argument against integrity at real boundaries: protect durable data, external callers, security, and failures with demonstrated likelihood or cost. It is an argument against paying complexity for imagined ones.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/docs/modes/piecemeal_growth.md?lines=1-9">Source: docs/modes/piecemeal_growth.md, lines 1–9</a></p>
+<p>This mode, when loaded, tends to produce fairly compact changes in the code. The point is to work from the requirements we have, rather than optimize for a myriad of imagined scenarios.</p>
+
+<h2 id="rule-4-document-the-surprises">Rule 4: Document the surprises</h2>
+
+<p>My starting rule is to document what would surprise an experienced engineer who already knows the stack. There is no need to explain how HTML works or how JavaScript is linked into a page. We can figure that out, and LLM was trained on that.</p>
+
+<p>When an agent and I have discussed a lot of material, I find this a useful request:</p>
+
+<blockquote>
+<p>Document only the things that were surprising to you.</p>
+</blockquote>
+
+<p>It can produce a compact summary. When updating existing documentation, I ask the agent to bring it into sync with the project, remove stale material, update the surprises, and remove the obvious things. A lot of the work is cutting things out.</p>
+
+<p>The same principle helps decide where information belongs. Ordinary implementation details can stay in the code. Surprising behavior or constraints specific to that code belong in nearby comments. Product purpose, customers, audience and underlying principles can live in documents, because the just implementation does not explain them.</p>
+
+<p>Suppose we create a class and describe its fields in a separate Markdown document. Later, a refactor renames a couple of fields but leaves the document unchanged. Now we have two conflicting sources of information. Which one should the agent believe?</p>
+
+<p>It is easier to keep the relevant explanation near the class and let the agent find and read the code. Agents know how to use <code>grep</code> and file tools! Repeating the implementation uses context and creates another representation we have to maintain. Hence the:</p>
+
+<pre><code class="language-md mod-src-excerpt">- Assume that the reader knows how to use grep and follow the links. E.g. instead of documenting makefile step in markdown, just mention it, same with the code.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/src/docs/modes/document_writing.md?lines=8-8">Source: docs/modes/document_writing.md, line 8</a></p>
+<p>Ideally, most of the code is so simple, boring and explanatory that it needs no comments.</p>
+
+<p>I think of it as roughly 5% infrastructure and critical moving parts, and 95% straightforward code. That is my personal goal in projects, not a strict target, though.</p>
+
+<h2 id="agent-discovery-in-practice">Agent discovery in practice</h2>
+
+<p>For this example, I started a fresh agent in the sample repository with this task:</p>
+
+<blockquote>
+<p>Explore this repository. Explain what users can do today, which features are only proposed, and how to run and verify the application. Keep the explanation short.</p>
+</blockquote>
+
+<p>In this session, the repository&rsquo;s <code>AGENTS.md</code> was already supplied before the task by Codex. There are also instructions and tool definitions supplied by the agent application, but <code>AGENTS.md</code> is the starting point we control inside the repository.</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261008122902-codex-session.png" alt="" /></p>
+
+<p>The most interesting part is how the agent went through our instructions:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261008122939-codex-internals.png" alt="" /></p>
+
+<p>Here is how it went:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261007115248-wire-b35-f02.png" alt="A fresh agent starts with AGENTS.md and the task, discovers seven document names, loads five relevant documents and supporting code, then verifies the application." /></p>
+
+<p>The agent first ran <code>tree docs</code> and listed the repository files. It then loaded documents in a batch:</p>
+
+<ul>
+<li><code>product.md</code>: the product vision and scope.</li>
+<li><code>behavior.md</code>: the accepted behavior users can rely on today.</li>
+<li><code>piecemeal_growth.md</code>: the mentality for working on the implementation.</li>
+<li><code>specifications.md</code>: how the executable specifications interpret the accepted behavior.</li>
+</ul>
+
+<p>Alongside those documents, it read the <code>README.md</code>, build and environment files, and relevant application code. It found how to run the application and how to verify it.</p>
+
+<blockquote>
+<p>Note that Sol-6.1 in Codex also decided to <code>cat AGENTS.md</code> once more in the session, even though it had the same file already passed to it by the harness. Let&rsquo;s call it a quirk.</p>
+</blockquote>
+
+<p>Then it ran <code>nix develop -c make check</code>. While the checks were running, it continued reading source files. The checks passed, including 46 scenarios with 202 expectations, race tests, vet, and the build.</p>
+
+<p>Two documents remained unopened: <code>document_writing.md</code> and <code>workbench_notes.md</code>. Their names were visible in the index, but their contents were not needed for this task. The agent was exploring and explaining the application; it was not writing documentation or workbench notes.</p>
+
+<p>That is <strong>progressive disclosure in a real session</strong>. The docs tree exposed the available knowledge, while task plus entry instructions guided the following selection. The agent loaded the relevant documents together, followed through into the implementation, and verified what it could.</p>
+
+<p>Along the lines we had our context organized neatly for us, top to bottom:</p>
+
+<ul>
+<li><code>AGENTS.md</code></li>
+<li>task</li>
+<li>our index - output of <code>doc tree</code></li>
+<li>docs loaded from the doc tree according to the task</li>
+<li>all other files and source code</li>
+</ul>
+
+<h2 id="keeping-the-discovery-path-visible">Keeping the discovery path visible</h2>
+
+<p>Ability to audit progressive disclosure by my own eyes (or more frequently by Codex reading its own <code>~/.codex/sessions</code> folder) allows me to see codebase efficiency and improve it. This is also why I prefer <strong>keeping project knowledge and reusable scripts</strong> in the repository over using various super tools and MCP servers.</p>
+
+<p><strong>Tools and skills can introduce another index</strong>, supplied by the agent application when a session starts. I have less direct visibility and control over how that catalogue is presented and how the agent chooses between it and our own documents.</p>
+
+<p>With documents and scripts in the codebase, I can inspect the entry point, see the tree, change a name, move a document, and observe what a fresh agent actually loads. The knowledge and the means of acting on it live in a place we can manage together.</p>
+
+<blockquote>
+<p>&ldquo;we can manage together&rdquo; is a polite version of saying to an agent to go review past sessions, suggest codebase improvements and then measure their impact on similar tasks.</p>
+</blockquote>
+
+<p>It also lets us use the same project knowledge with different agents, including Codex and Claude Code.</p>
+
+<h2 id="keep-working-records-out-of-the-normal-reading-path">Keep working records out of the normal reading path</h2>
+
+<p>As I&rsquo;ve mentioned earlier, I like to <strong>think about the project as a conceptual pyramid</strong>. At the top are the purpose and context: what are we building, why, and for whom? Below that are more detailed requirements and features, then the code. I want the reading path to expose that context in a useful order.</p>
+
+<p>That context is the state of the project/product that is true. However, documents can also include partially relevant documents like <strong>working plans and historical notes. They need to sit to the side</strong> to avoid adding noise to the primary working context.</p>
+
+<p>I do not put every plan, prototype, or session note into <code>docs/</code>. That would gradually mix the current project knowledge with past ideas, changed decisions and various transient work.</p>
+
+<p>Those materials go into <code>records/</code>. That folder has its own <code>AGENTS.md</code>, explaining that these are historical records, that <strong>they do not need to stay synchronized with the codebase</strong>, and that the <strong>agent should open them only when explicitly instructed</strong>.</p>
+
+<p>For a complex feature, I might write a plan, follow a couple of steps, then abandon it and start another plan. If a later refactor renames a class, I do not want the agent updating every obsolete plan that mentions it. Those records describe the work as it happened; they do not all need to describe the current code.</p>
+
+<p>Current requirements belong in <code>docs/</code>. A short proposed feature can also live there if we plan to work on it soon, with its status made clear. A more speculative possibility can stay in <code>records/</code>.</p>
+
+<h2 id="practice-try-it-with-your-agent">Practice: Try it with your agent</h2>
+
+<p>Start a new conversation in the sample repository and give the agent a real task. The orientation prompt above is one option. You can also ask:</p>
+
+<blockquote>
+<p>What do I need to run the application locally?</p>
+</blockquote>
+
+<p>Or:</p>
+
+<blockquote>
+<p>Can you start the web server and show me around?</p>
+</blockquote>
+
+<p>Or:</p>
+
+<blockquote>
+<p>Explain the architecture. How is it working? What are the surprises and nuances?</p>
+</blockquote>
+
+<p>When exploring a new codebase, I also like asking the agent to change something, just to see how that change impacts the codebase. We are working in a Git repository, so <strong>any changes can be discarded later</strong>.</p>
+
+<p>I put a planned feature somewhere in the code (<code>records/release_a_seat.md</code> to be precise). So you can ask agent about it.</p>
+
+<blockquote>
+<p>I want to implement that &ldquo;release a seat&rdquo; feature. Give me an implementation plan.</p>
+</blockquote>
+
+<p>Alternatively you could ask the agent to write executable specifications for you to review or implement the entire feature and see how it goes.</p>
+
+<blockquote>
+<p>Implement me &ldquo;release a seat&rdquo; feature</p>
+</blockquote>
+
+<p>By the way, <strong>the proposal still has open decisions</strong>: what happens when there is no reservation, when the action is submitted twice, or when someone wants to reserve again?</p>
+
+<p>A careful agent should not write any specs or tests without prior approval.</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261008130512-codex-implementing-feature.png" alt="" /></p>
+
+<p>Keep in mind, that you do not need to understand every detail of the specification machinery yet. This exercise lets you see whether the discovery path gives the agent enough context to find the relevant instructions and proceed.</p>
+
+<ol>
+<li>Choose one task and inspect the conversation&rsquo;s tool calls.</li>
+<li>Which documents did the agent discover? Which did it load?</li>
+<li>Did the agent find the commands it needed?</li>
+<li>Where did it miss something or read material that did not help?</li>
+</ol>
+
+<p>You can also give the session link to a new chat that can inspect the original conversation and ask:</p>
+
+<blockquote>
+<p>Look at how the agent in this session went through progressive disclosure. Explain how it discovered and loaded the relevant information, and where the reading path worked well or poorly. Session: SessionID, locate it in ~/.codex/sessions</p>
+</blockquote>
+
+<p>You can get session ID by grabbing deep link of a session in Codex:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261008130751-copy-deep-link.png" alt="" /></p>
+
+<p>This answer could be used to optimise the progressive disclosure in the codebase. However, I would not reorganize a repository based on a single chat session. One conversation is useful for understanding how the path works. For broader changes, I look for repeated patterns across many sessions; the history of actual work gives us something to improve from. We will come back to those retrospectives later in the Module.</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents/asset/20261008131140-reflection-results.png" alt="" />
+Self-check questions:</p>
+
+<ol>
+<li>Which problem with the codebase did reflection discover on the screenshot above? Is it a real problem? Would you fix it? Why?</li>
+<li>If we were to fix that, what would be the minimal change? How would you test that?</li>
+</ol>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/00_launch">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead locked" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents"><span>Next</span> <small class="ui-meta">Not yet published</small></a></nav></div></main></body></html>

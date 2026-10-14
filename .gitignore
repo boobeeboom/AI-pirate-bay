@@ -1,0 +1,6 @@
+.DS_Store
+site/
+attachments/
+tools/
+package.json
+01-organize-codebase-for-agents.md
