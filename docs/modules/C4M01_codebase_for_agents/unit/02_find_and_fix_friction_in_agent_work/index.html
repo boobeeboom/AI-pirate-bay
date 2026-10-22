@@ -1,0 +1,237 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Find and fix what gets in your agent’s way — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body class="user-shell" data-page-shell="user"><header id="user-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="user-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents">Module 1: Organize your codebase for agents</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">Find and fix what gets in your agent’s way</span></nav><nav class="cmp-context-bar-views"><a class="cmp-context-bar-view ui-chrome cmp-context-bar-view-current" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work">Unit</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/src">Source</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/download/s02_main.zip">Download</a></nav></div></div> <main id="mod-unit" class="user-main ui-measure-read" data-product-case="User reads a Purchased Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 02</div><h1 id="mod-unit-title" class="ui-title">Find and fix what gets in your agent’s way</h1><p id="mod-unit-summary" class="ui-gloss">Let’s work on a feature, review where the agent misses our expectations, and figure out why. Then make a few small corrections to the codebase and try again in a fresh session to see whether they helped.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>In the previous unit we&rsquo;ve covered the fundamentals of using progressive disclosure and <code>tree docs</code> principle to organize the documentation that lives in the codebase and guides the development.</p>
+
+<p>The most important aspect here: repository layout influences how an agent discovers information and carries out decisions. Now let&rsquo;s put that to actual practice.</p>
+
+<p>I usually split my work with coding agents into following buckets:</p>
+
+<ol>
+<li>Maintenance cleanup before work</li>
+<li>Work on a feature</li>
+<li>Check the session output</li>
+<li>Diagnose the problem</li>
+<li>Choose how to correct the problem</li>
+<li>Did the corrections help?</li>
+</ol>
+
+<p>In this unit I&rsquo;ll show you how we can go through all these steps.</p>
+
+<blockquote>
+<p>The process might look a bit long and a bit formalized. However, that is just a mental checklist that we need to watch out only when the codebase is small or was refactored recently. When the project codebase is stable and predictable, we can skip the detailed investigation on routine tasks. Checking the result and running the relevant verification still matter.</p>
+</blockquote>
+
+<h2 id="maintenance-cleanup">Maintenance cleanup</h2>
+
+<p>Noise and inconsistencies in the codebase get in the way of agents. So if there are any small things we can clear up before starting to work - it would be better.</p>
+
+<p>I like doing small pruning sessions before work. This is mentally easy because it involves deleting or fixing information that is clearly wrong. Here is a variation of prompt that works well for me:</p>
+
+<pre><code class="language-text">Load the piecemeal growth mentality. Then look at the repo and search for inconsistencies, noise and things that could be cleaned up or corrected. Give me a list of 3 possible things to fix. Smallest first
+</code></pre>
+
+<p>Here is something that Codex gave me in return.</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019115727_cleanup_suggestions.png" alt="" /></p>
+
+<p>In this scenario, my own ranking would look like this:</p>
+
+<ol>
+<li>HTMX is something I would like to use, but not using right now. When the time comes, adding it will be trivial. So <strong>let&rsquo;s drop</strong> mention of it for now.</li>
+<li>Removing stale references is always good. <strong>Let&rsquo;s drop them</strong></li>
+<li>I&rsquo;m not quite sure what is happening here. Need to think through the requirements, so <strong>let&rsquo;s skip this cleanup</strong>.</li>
+</ol>
+
+<blockquote>
+<p>Cheap cleanup ends where deciding behavior begins (or any kind of deciding). This is why I skip step 3 for now.</p>
+</blockquote>
+
+<p>So we can ask: <code>Do 1 and 2</code> and quickly review the suggested changes.
+<img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019120325_cleanup_diff.png" alt="" /></p>
+
+<p>Deletion changes are easy to review, but I don&rsquo;t like how the agent rewrote the <code>AGENTS.md</code>. Hence a small follow-up request:</p>
+
+<pre><code class="language-text">I don't like your change to AGENTS.md. Replace HTMX with server-rendered HTML, and keep the rest of the stack EXACTLY as it was.
+</code></pre>
+
+<p>That should be enough for the cleanup routine. Let&rsquo;s commit and work on the feature now.</p>
+
+<h2 id="working-on-a-feature">Working on a feature</h2>
+
+<p>We&rsquo;ll talk more about executable specs and work on product features in the next module. For now, let&rsquo;s just focus on the aspects that are relevant to this module - authoring a commit with a coding agent.</p>
+
+<p>We have a feature description already stored in <code>records</code>:</p>
+
+<pre><code class="language-text mod-src-excerpt">## Intent  
+  
+A participant who can no longer attend should be able to release their seat, making it available to someone else.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/src/docs/features/release_a_seat.md?lines=5-7">Source: docs/features/release_a_seat.md, lines 5–7</a></p>
+<p>Normally I would split the process of working on a feature into multiple steps:</p>
+
+<ul>
+<li>review documentation for any conflicts</li>
+<li>plan out executable specs and review them</li>
+<li>implement the code and review it</li>
+</ul>
+
+<p>But for the sake of the practice exercise, let&rsquo;s try implementing it in one shot, for example by asking to &ldquo;Implement &lsquo;release a seat&rsquo; feature with specs&rdquo;</p>
+
+<p>In that case <strong>I want my agent in this repository to pick the correct flow automatically</strong>:</p>
+
+<ul>
+<li>Read core documentation relevant to feature development</li>
+<li>Discover the feature and read about it</li>
+<li>Discover spec testing setup</li>
+<li>Try running the specs</li>
+<li>Think a bit and write new specs</li>
+<li>Write the code</li>
+<li>Run all specs to ensure that no regressions were introduced</li>
+<li>No unit tests (aside from the specs) are added</li>
+<li>Update feature status so that it is marked as implemented</li>
+</ul>
+
+<p>Let’s see whether the context and progressive disclosure already communicate that.</p>
+
+<p>The result looks OK on the surface:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019131954_seat_release_implementation.png" alt="" /></p>
+
+<p>The whole point of setting up coding harnesses for AI Agents is that we expect that agents will work according to our expectations. When this happens all the time - we can relax and focus on higher-level management.</p>
+
+<p>If that doesn&rsquo;t happen - we can tweak things in the codebase (in a form of git-driven Reinforcement Learning) until we are happy.</p>
+
+<p>Let&rsquo;s dive deeper into the thinking process.</p>
+
+<h2 id="check-the-session-output">Check the session output</h2>
+
+<p>So let&rsquo;s review if everything went according to the plan. One way is to do it manually. Another way - just ask Codex itself:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019132728_session_review_request.png" alt="" /></p>
+
+<blockquote>
+<p>Note that when using Claude you might need to add something like: &ldquo;I&rsquo;m genuinely interested in retrospective and feedback&rdquo; to avoid getting it too defensive.</p>
+</blockquote>
+
+<p>As it turns out, there were 3 deviations between what we expected and the actual thinking process:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019133019_workflow_deviations.png" alt="" /></p>
+
+<p>It is time to see what went wrong</p>
+
+<h2 id="diagnose-the-problem">Diagnose the problem</h2>
+
+<p>It can always feel that the problem is &ldquo;not enough instructions&rdquo; with an immediate solution being &ldquo;just add everything to AGENTS.md or a top instruction&rdquo;. For example, I could just jump in and add following lines to <code>AGENTS.md</code>:</p>
+
+<ul>
+<li>Always write specs before writing code</li>
+<li>Don&rsquo;t add unit tests when asked to write specs</li>
+<li>Always mark feature as implemented when work is done</li>
+</ul>
+
+<p>However, if we keep on adding a verbose tweak for every possible problem, this could later lead to instruction bloat, context pollution and more hallucinations. This could happen, because <strong>the problem we are patching is actually not the root cause</strong>.</p>
+
+<p>So <strong>let&rsquo;s figure out the root cause first</strong>. We assume that the modern agents are very smart and intelligent, they just might have different priorities (or a different understanding of what we want). I&rsquo;d use a diagnostic prompt like this one:</p>
+
+<pre><code class="language-text">Let's review these failures. Consider progressive disclosure, review your own thinking trace. Is it clear for you why I consider these 3 problems to be problems? If expectations make sense, re-trace your reasoning steps and try to identify why thinking process didn't pick that option.
+
+How would you suggest to fix them (under piecemeal growth mentality)?
+</code></pre>
+
+<p>The answer includes 3 key points that lead to reasoning problems:</p>
+
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019134927_workflow_diagnosis.png" alt="" /></p>
+
+<p>This allows us to identify root causes.</p>
+
+<ul>
+<li><em>Why did specs come after the code?</em> Codex misclassified request as a coding task that is followed by spec writing.</li>
+<li><em>Why did it add unit tests unasked?</em> Because it thought that specs (that test functionality) imply unit tests</li>
+<li><em>Why didn&rsquo;t it mark the feature as implemented?</em> Because the feature was located in <code>records</code> folder, and it actually followed the instruction of not changing historical records on a whim.</li>
+</ul>
+
+<p>So the third problem doesn&rsquo;t even need fixing at the instruction level - instructions have worked as expected. We should move feature into the docs ourselves.</p>
+
+<p>For the other two - there are options.</p>
+
+<h2 id="choose-how-to-correct-the-problem">Choose how to correct the problem</h2>
+
+<p>When I asked Codex for the self-diagnostic exploration above, it offered following solutions at the end of the response:</p>
+
+<ul>
+<li><em>In <code>specifications.md</code>, make the ordering explicit: <strong>write the feature scenarios, run them and inspect the expected failures, then implement</strong>. This puts the instruction where feature specification work already directs attention.</em></li>
+<li><em>Clarify the existing permission boundary: <strong>“With specs” authorizes executable scenarios; additional unit tests require separate permission.</strong> Descriptions of existing supporting tests should remain descriptive.</em></li>
+</ul>
+
+<p>I&rsquo;ll implement them, but will do in a peculiar way.</p>
+
+<p>First, I&rsquo;m going to <strong>revert all changes in the codebase</strong>, because I want to retry the request and verify that everything works as expected</p>
+
+<p>Second, I&rsquo;m going to edit the foundational documents (docs that set up the processes) by hand. It will be less verbose this way.</p>
+
+<p>This sounds like a short and compact addition to the <code>specifications.md</code>:</p>
+
+<pre><code class="language-md mod-src-excerpt">## Development process  
+  
+Adopt the TDD mindset: change feature scenarios first, implement code next.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/src/docs/specifications.md?lines=24-26">Source: docs/specifications.md, lines 24–26</a></p>
+<p>LLMs probably have ingested a ton of articles and books on Test-Driven Development. So we just need to help them get the priorities straight. And let&rsquo;s add a tiny clarification to the &ldquo;don&rsquo;t touch tests rule&rdquo;:</p>
+
+<pre><code class="language-md mod-src-excerpt">Do not touch tests or executable specs without explicit permission for the kind being changed. Tests and specs are requirements, when proposing one, explain the behavior it would freeze and its coupling to implementation.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/src/AGENTS.md?lines=15-15">Source: AGENTS.md, line 15</a></p>
+<p>Here I just added <code>for the kind being changed</code> at the end of the first sentence.</p>
+
+<p>Both changes look minimal. Plus I&rsquo;ll relocate <em>seat release</em> feature into docs.</p>
+
+<p>Let&rsquo;s see if that actually improves the situation.</p>
+
+<h2 id="did-the-corrections-help">Did the corrections help?</h2>
+
+<p>It is time to run the prompt once again in <strong>a fresh session</strong>:</p>
+
+<pre><code class="language-text">Implement &quot;release a seat&quot; feature with specs
+</code></pre>
+
+<p>And send in the same session request to check the reasoning trace for the conformance with the original plan:</p>
+
+<pre><code class="language-text">My expectation of this session was the following. Review if that went according to the plan. No changes.
+
+Expectation:
+
+- Read core documentation relevant to feature development
+- Discover the feature and read about it
+- Discover spec testing setup
+- Try running the specs
+- Think a bit and write new specs
+- Write the code
+- Run all specs to ensure that no regressions were introduced
+- No unit tests (aside from the specs) are added
+- Update feature status so that it is marked as implemented
+</code></pre>
+
+<p>The implementation shows that the workflow has improved a lot:
+<img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/02_find_and_fix_friction_in_agent_work/asset/20261019142046_corrected_workflow_review.png" alt="" />
+Codex had to decide on a status wording gap: &ldquo;accepted&rdquo; vs &ldquo;implemented&rdquo; - and guessed wrong. But that is a minor thing that wasn&rsquo;t documented anywhere. I&rsquo;d just ignore it for now.</p>
+
+<p>So it looks like the corrections did help. Codex followed the process even though we&rsquo;ve never specified the process exactly. We instead ensured that its reasoning chain is aligned with our expectations at the turning points.</p>
+
+<p><strong>A few very small changes to the repository were enough to influence how the agent approached the task.</strong></p>
+
+<blockquote>
+<p>Source code for this unit includes the implemented seat-release feature.</p>
+</blockquote>
+
+<h2 id="wrapping-up">Wrapping up</h2>
+
+<p>I don&rsquo;t follow this process every time I implement the feature, only when the results are not what I would expect. This happens most frequently in fresh repositories or large codebases after refactoring. However, after the repository is tuned according to my expectations or the processes of a team, then the development mostly feels like vibe coding.</p>
+
+<p>Here are a few practice tasks that you can do before we proceed to the next video session. Pick one:</p>
+
+<ol>
+<li><strong>Session review</strong>: pick one task and write down two or three things you expected the agent to do. Compare those expectations with its actual actions. Find one discrepancy or explain why no correction is needed.</li>
+<li><strong>Try a small correction:</strong> use the sample or your own repository. Change one instruction, document location, or reference. Repeat the same request in a fresh session and compare both the reasoning process and the result. Did they change as you expected?</li>
+<li><strong>Check whether the fix in this repo sticks:</strong> try a different task with the amended repository. Does the agent still discover the relevant guidance and follow the expected process?</li>
+</ol>
+
+<p>Before proceeding to the video, you can share a short example in our chat group: your request, what you expected, what happened, and any correction you tried. A question is enough; you do not need to complete all the exercises.</p>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/01_organize_your_codebase_for_agents">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead locked" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents"><span>Next</span> <small class="ui-meta">Not yet published</small></a></nav></div></main></body></html>
