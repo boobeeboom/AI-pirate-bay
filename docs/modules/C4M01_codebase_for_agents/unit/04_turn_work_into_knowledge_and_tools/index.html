@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Turn completed work into reusable knowledge and tools — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body class="user-shell" data-page-shell="user"><header id="user-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="user-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents">Module 1: Organize your codebase for agents</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">Turn completed work into reusable knowledge and tools</span></nav><nav class="cmp-context-bar-views"><a class="cmp-context-bar-view ui-chrome cmp-context-bar-view-current" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools">Unit</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/src">Source</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/download/s04_main.zip">Download</a></nav></div></div> <main id="mod-unit" class="user-main ui-measure-read" data-product-case="User reads a Purchased Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 04</div><h1 id="mod-unit-title" class="ui-title">Turn completed work into reusable knowledge and tools</h1><p id="mod-unit-summary" class="ui-gloss">Turn completed work into reusable knowledge and tools. We&#39;ll introduce progressive disclosure for tools and large markdown files, then we&#39;ll see how it works out in practice. Includes written material, updated source code drop and optional practice</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>At the end of the previous live session we ended up with a working code repository, within which we were able to implement a new feature in a controlled way using progressive disclosure. Putting all the required information in auditable documents and scripts allowed us to see exactly what is going on, how agents load information and how the context is being organised. This also enables later inspection and improvement.</p>
+<p>The mental model at this point looks like this:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_repository_discovery_model.png" alt=""></p>
+<p>We have a single repository, with doc tree hierarchy at the root. It describes architecture, approaches and product requirements. Requirements are captured in the executable specs that are followed by the implementing code.</p>
+<p>All that forms a conceptual pyramid that organizes how information is generally loaded in the context of any agent operating in the repository.</p>
+<p>In the next two units we’ll talk about scaling this approach in 3 directions:</p>
+<ul>
+<li>adding custom CLI tools</li>
+<li>introducing markdown outlines to work efficiently with large files</li>
+<li>introducing concept of a control center to manage work across multiple code repositories</li>
+</ul>
+<p>The resulting mental model will grow up and show how we can scale things up, if needed:
+<img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_expanded_discovery_model.png" alt=""></p>
+<p>While doing that, we’ll continue using core principles from the previous units:</p>
+<ul>
+<li>progressive disclosure approach stays, we just add one more “hop” at the top and one more level of detail at the bottom (CLI tools and outlines)</li>
+<li>there <strong>still will be zero skills</strong> (we control context layout, while setup remains portable across harnesses)</li>
+</ul>
+<p>Let’s get started!</p>
+<h2 id="adding-an-outline-tool">Adding an outline tool</h2>
+<p>During the previous live session we’ve decided that it would be nice to introduce a better tooling to work with large markdown files without loading them entirely into the context. This will demonstrate how we can support:</p>
+<ul>
+<li>dedicated tools and commands;</li>
+<li>larger documents.</li>
+</ul>
+<p>How do we do that? Let’s circle back to the order in which agents load content in their context:</p>
+<ol>
+<li>automatically load <code>AGENTS.md</code> and read it</li>
+<li>execute <code>tree docs</code> to get a map of the repository.</li>
+<li>dive into the relevant files in folders</li>
+</ol>
+<p>so the <code>tree docs</code> is clearly the extension point. In our sample codebase the output of the command looks like this:</p>
+<pre><code class="language-text">
+docs
+├── behavior.md
+├── features
+│   └── release_a_seat.md
+├── modes
+│   ├── document_writing.md
+│   ├── piecemeal_growth.md
+│   └── workbench_notes.md
+├── product.md
+└── specifications.md
+
+3 directories, 7 files
+</code></pre>
+<p>That looks nice and uses very few tokens:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_doc_tree_token_count.png" alt=""></p>
+<p>But probably we could do a bit more.</p>
+<p>What I would like to do next is to <strong>change the output of tree docs to make it more helpful to the agents</strong>, while keeping context use roughly the same. I would like the output of <code>doc tree</code> to also show:</p>
+<ol>
+<li>available tools with their usage;</li>
+<li>size of existing md files - hinting agent whether it should load file entirely or get its table of contents first.</li>
+</ol>
+<p>Let’s start from the output. For example, this variant looks rather nice to me:</p>
+<pre><code class="language-text">docs/
+  behavior.md - 6 kB
+  features/
+    release_a_seat.md
+  modes/
+    document_writing.md
+    piecemeal_growth.md
+    workbench_notes.md
+  product.md
+  specifications.md - 6 kB
+  tools/
+    outline.py FILE - show markdown outline with line ranges (use for large files)
+    tree.py - show docs and tools inside docs folder
+</code></pre>
+<p>The output stays rather compact (89 tokens), but it:</p>
+<ul>
+<li>includes tools along with the brief help text</li>
+<li>hints at large files by showing their size</li>
+<li>allows adding more tools and documents as needed (it isn’t hard-coded)</li>
+</ul>
+<p>The next step is to actually change <code>tree docs</code> to print that text. This is easy, since actually <strong>code agents don’t care</strong> if they have to execute <code>tree docs</code> or <code>python3 my_tree_script.py</code>.</p>
+<p>So we can just <strong>copy-paste the desired output to Codex and ask to implement such script</strong> (e.g. in <code>docs/tools/tree.py</code>) that will provide a better version of <code>tree docs</code>, while highlighting large files and printing the first line of each Python script’s module docstring.</p>
+<p>Once that is done, we could ask to write another script, called <code>docs/tools/outline.py</code> that would take a Markdown file as an argument and list its headings and their inclusive line ranges as another tree.</p>
+<p>Once the scripts are done, we can try running them ourselves:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_enhanced_doc_tree.png" alt="">
+and then try running the outline tool as well:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_markdown_outline.png" alt="">
+So we get a very nice progression: first agents scan the documents in a repository as a tree, where each node can be addressed individually. Then they can optionally scan outlines of large markdown files as a tree, where each node is also addressable via line numbers.</p>
+<p>On each level agents can perform efficient discovery first, followed by the selective reading. This comes naturally, since we make sure that our nodes are readable.</p>
+<blockquote>
+<p>If you have used Company Brain technology of BitGN (e.g. by participating in the swarm experiment) and explored first stanzas that MCP delivers to agentic harness on startup, you would’ve noticed that it is a bit similar in structure - it delivers core instructions and a tree of workspaces/tools for further exploration.</p>
+</blockquote>
+<p>All that remains - update <code>AGENTS.md</code> to point to the new way of getting our doc tree:</p>
+<pre><code class="language-md mod-src-excerpt">Always run `docs/tools/tree.py` at the start, use outline tool for ToC of large Markdown files. Before changing documentation read `document_writing.md`.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/src/AGENTS.md?lines=9-9">Source: AGENTS.md, line 9</a></p>
+<p>Updated source code included into the download of this unit.</p>
+<h2 id="adapting-the-codebase">Adapting the codebase</h2>
+<p>Now we have implemented new functionality in the codebase. But, as it usually happens, perhaps the repository needs to be migrated or updated - in order to use this new feature consistently.</p>
+<p>Let’s ask codex to review and suggest cleanups.</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_outline_cleanup_suggestions.png" alt=""></p>
+<p>In my case codex suggested to:</p>
+<ol>
+<li>Make behavior and specifications more readable by introducing headings to structure content.</li>
+<li>Tweak <code>AGENTS.md</code> so that headings match content.</li>
+</ol>
+<p>If you think about it - <strong>Codex is suggesting to make documents more readable</strong> for both humans and agents. It does that, because we introduced a tool that works naturally with the way we organize large documents.</p>
+<p>If we look, for example, at the outline of the <code>docs/behavior.md</code>, it looks uneven, “Behavior contract” section contains a chunk of 5.5kB of text:</p>
+<pre><code class="language-text">docs/behavior.md · 39 lines · 6,053 bytes
+  # Behavior contract · L1–39 · 6,053 bytes
+    ## Persistence boundary · L35–39 · 506 bytes
+</code></pre>
+<p>So let’s try checking out how Codex would carry out its own suggestions. It has piecemeal growth already loaded in the conversation, so it should be minimal:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_document_heading_cleanup.png" alt="">
+And the behavior file now looks more reasonable as well, giving agents an overview of all features in a product for free:</p>
+<pre><code class="language-text">docs/tools/outline.py docs/behavior.md
+Markdown outlines. Line ranges are 1-based and inclusive (e.g. for sed).
+
+docs/behavior.md · 49 lines · 6,203 bytes
+  # Behavior contract · L1–49 · 6,203 bytes
+    ## Workshop creation · L5–8 · 428 bytes
+    ## Participant reservation flow · L9–22 · 1,880 bytes
+    ## Catalogue, organizer pages, and request handling · L23–34 · 1,596 bytes
+    ## Releasing seats · L35–40 · 1,029 bytes
+    ## Changing capacity · L41–44 · 522 bytes
+    ## Persistence boundary · L45–49 · 506 bytes
+</code></pre>
+<p>Now let’s see if the agents actually use this feature in daily work.</p>
+<p>It will show better for large documents which create context pressure, so I’ve added transcript from the unit3 live video to the codebase under <code>records/</code>. It is structured using headings, so we can ask a question like: “records/ has 45-min video transcript about this codebase. What is it about?”</p>
+<p>Here is what should happen:</p>
+<ol>
+<li>Codex should always start by executing the new enhanced doc tree to get high-level overview</li>
+<li>Within that overview it should discover the tool usage for outlining large files</li>
+<li>While searching for the information, it should use outline tool for the large files.</li>
+</ol>
+<p>Here is how it goes:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools/asset/unit_04_transcript_tool_discovery.png" alt=""></p>
+<ol>
+<li>Codex executed <code>tree.py</code> at the start</li>
+<li>It read smaller files entirely</li>
+<li>It used <code>outline.py</code> tool for the initial discovery of larger files like <code>behavior.md</code> and the transcript</li>
+</ol>
+<p>This looks good enough to proceed with the repo. All changes are available in the source code drop for this unit.</p>
+<p>Although it already feels like this transcript shouldn’t really live in the codebase. Perhaps, it is a piece of information that relates to principles that cover multiple codebases? We’ll talk about control centers (as a natural extension of progressive disclosure pattern) in more detail in the next live session.</p>
+<h2 id="self-check-questions">Self-check questions</h2>
+<ol>
+<li>Take a look at the output of the two commands (in fact, try running them yourself in the terminal). Can you spot small hints in the output that work as a progressive disclosure and lead agents to discover more ways of working with the codebase, as they dive deeper? What are they? Why are they shaped this way? Why are they located on the lines where they are (and not earlier or later)?</li>
+<li>This progressive disclosure setup has a few gaps that will show up as the project grows more complex. How do you think, what are they?</li>
+</ol>
+<h2 id="practical-exercise">Practical Exercise</h2>
+<p>Pick any agentic coding harness other than Codex. What would happen, when you give it a task below in this repository? First come up with your idea of how agent is going to work, then execute that agent and see if its sequence of action differs. Why does it differ?</p>
+<p>Here is the task prompt:</p>
+<blockquote>
+<p>I want to add a new feature into the codebase - workshop admin should be able to close and reopen reservations for a workshop. Closing blocks new reservations but preserves existing ones and allows releases. Reopening allows reservations when seats remain. Changing capacity does not reopen reservations. Plan the feature then implement it (with executable specs).</p>
+</blockquote>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/03_find_and_fix_friction_walkthrough">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead locked" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents"><span>Next</span> <small class="ui-meta">Not yet published</small></a></nav></div></main></body></html>
