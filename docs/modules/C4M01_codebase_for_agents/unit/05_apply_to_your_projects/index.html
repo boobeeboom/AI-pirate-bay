@@ -1,0 +1,131 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Make the approach work in your own projects — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body class="user-shell" data-page-shell="user"><header id="user-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="user-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents">Module 1: Organize your codebase for agents</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">Make the approach work in your own projects</span></nav><nav class="cmp-context-bar-views"><a class="cmp-context-bar-view ui-chrome cmp-context-bar-view-current" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects">Unit</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/src">Source</a><a class="cmp-context-bar-view ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/download/s05_main.zip">Download</a></nav></div></div> <main id="mod-unit" class="user-main ui-measure-read" data-product-case="User reads a Purchased Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 05</div><h1 id="mod-unit-title" class="ui-title">Make the approach work in your own projects</h1><p id="mod-unit-summary" class="ui-gloss">Make the approach work in your own projects and scale with control centers. Discuss what needs adapting, and consolidate the takeaways. Includes wrap-up video.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>Let’s wrap up this module and our journey of scaling AI Coding approaches.</p>
+<p>In the previous unit we ended up in an awkward situation - we added a transcript of the webinar that describes approaches used in the codebase to the same codebase. It felt like a simple way to be able to tell an agent “Now let’s go through the transcript and see what else we can apply to our codebase”.</p>
+<p>At the same time this feels slightly wrong:</p>
+<ul>
+<li>webinars and conversations shouldn’t live in the code</li>
+<li>different ideas, concepts or practices might actually be relevant to multiple repositories</li>
+</ul>
+<p>This actually brings up another higher-level conflict. In AI Native coding setups we are going to have a mixture of various areas of knowledge and expertise that don’t cleanly map 1:1 to the code repositories. In fact, this is a mess:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_cross_cutting_knowledge.png" alt=""></p>
+<p>For example, an IT department in a company might need to maintain a portfolio of services and codebases, trying to keep them up to date with the shared best practices, infrastructure approaches and documentation.</p>
+<p>Likewise, in a product-oriented startup, the team might need to maintain a whole bunch of repositories around concrete deployments, but still collaborate on keeping them aligned with the product vision, shared DevOps practices and CI/CD processes.</p>
+<p>Basically, <strong>regular codebases are organized around units of deployment or teams, while there always are cross-cutting concepts that are orthogonal to this setup</strong>.</p>
+<p>So we need to move one level up. Thankfully, progressive disclosure can handle that.</p>
+<p>My solution to the problem starts by figuring out areas of responsibility that we can capture cleanly in a separate repository, and then making that repository relevant to multiple codebases.</p>
+<p>Since we’ve already started talking about applying principles from the AI Code Module 1 to multiple repos, let’s focus on that.</p>
+<p>We’ll build ourselves a “Technical Excellence Control Center”. It will capture high-level insights from Module 1 and its sample project, allowing us to structure that information and apply it to other projects. Plus it will also demonstrate how Personal OS/Brain setups can be created.
+<img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_practice_propagation.png" alt=""></p>
+<h2 id="technical-excellence-center">Technical Excellence Center</h2>
+<p>So I would like to create a Git repo the whole purpose of which is to capture ideas about what constitutes “best practices” in AI Native Coding so far. The practices themselves will be replaceable (you could put in your own), but it will demonstrate how we can organize the repo.</p>
+<p>Here is the layout of this repo, as printed by running <code>docs/tools/tree.py</code>:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_control_center_tree.png" alt=""></p>
+<p>You can immediately spot a few similarities and differences!</p>
+<p><strong>What is similar to a coding project</strong>:</p>
+<ul>
+<li>we have the same docs folder with <code>modes</code> and <code>tools</code>.</li>
+<li><code>AGENTS.md</code> still points to the tools and instructs agents to scan the doc tree with <code>tree.py</code> on startup, while using <code>outline.py</code> for working with large Markdown files.</li>
+</ul>
+<p>Here is how it starts:</p>
+<pre><code class="language-md mod-src-excerpt"># Technical Excellence Center
+
+This control center helps us preserve engineering evidence, index useful sources, connect their stories, and deliberately apply practices across projects. `docs/` is its operating guidance; `00_inbox/` through `03_apply/` are its working memory.
+
+Always run `python3 docs/tools/tree.py` at the start. Use `outline.py` to inspect large Markdown files, then read the relevant line ranges. Follow source references when the task needs evidence; do not load all incoming or captured material at startup.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/src/AGENTS.md?lines=1-5">Source: AGENTS.md, lines 1–5</a></p>
+<p><strong>What is different</strong>:</p>
+<ul>
+<li>There is no source code in this repo (at least not yet)</li>
+<li>Instead of the source code, we have 4 levels of information processing: inbox -&gt; capture -&gt; index -&gt; apply. This structure is optimized for working with diverse information on the coding patterns &amp; practices across multiple projects</li>
+</ul>
+<p>Basically in this repository we keep core principles similar to those in the other repositories, but adjust the shape of the working memory to match the tasks at hand.</p>
+<p>You already know from the previous units how <code>docs</code>, <code>tools</code> and progressive disclosure work. On top of that we introduce two concepts:</p>
+<ol>
+<li>ingestion pipeline (inbox -&gt; capture -&gt; index)</li>
+<li>project workspace (apply)</li>
+</ol>
+<p>Let’s quickly go through these.</p>
+<h2 id="ingestion-pipeline">Ingestion Pipeline</h2>
+<p>The purpose of the ingestion pipeline is to allow adding a lot of raw information into the repository (things that we want to remember about a given topic), while minimizing context pollution and optimizing search.</p>
+<p>I do it by adding a hierarchy of folders. They are even prefixed by numbers to make the order obvious.</p>
+<ul>
+<li><code>00_inbox</code> - articles, transcripts and other things that we want to capture go here. This is a temporary staging ground</li>
+<li><code>01_capture</code> - the source is preserved here unchanged, so we can return to what it actually said.</li>
+<li><code>02_index</code> - each source gets a card that helps agents decide whether to open it and find useful passages. Arcs connect the evidence into evolving stories, including what remains unclear.</li>
+</ul>
+<p><code>engineering_interests.md</code> tells the agent which questions I care about when indexing sources. An arc can start with one source if it advances one of those questions; otherwise, a card is enough.</p>
+<blockquote>
+<p>This is also how the ingestion pipeline in the Company Brain of BitGN is structured. It scales well to thousands of documents.</p>
+</blockquote>
+<p>Now, let’s see how this ingestion pipeline works.</p>
+<p>I’ve placed <code>unit_03_walkthrough_transcript.md</code> into the inbox and will ask Codex to process it.
+<img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_transcript_ingestion_discovery.png" alt=""></p>
+<p>While the process runs, see that our changes from the previous unit that were made in another repository work here as well:</p>
+<ol>
+<li>The agent starts work by executing <code>tree.py</code>. It will get a high-level overview and tool usage tips</li>
+<li>The agent loads core principles entirely, but then uses the outline tool to scan the 58 kB transcript before loading it.</li>
+</ol>
+<blockquote>
+<p>I had to use the sentence “Don’t use yg” to avoid filing that webinar under a globally available workspace. You don’t need to mention that.</p>
+</blockquote>
+<p>Once the work is done, we can review the changes:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_transcript_ingestion_result.png" alt=""></p>
+<p>So the agent:</p>
+<ol>
+<li>moved the source from the inbox into the capture folder.</li>
+<li>created a small index card that summarizes the transcript (it will help to scan information later)</li>
+<li>decided to start a new arc about spec-driven development, which is funny, since spec-driven development will be the focus of the next module.</li>
+</ol>
+<p>The important part is that you don’t need to touch anything in the <code>02_index</code> folder. It is maintained and used automatically by the agents. <strong>Just keep on adding relevant content</strong>.</p>
+<blockquote>
+<p>To be more precise, agents update the index <strong>when asked to ingest</strong>, while people can check whether it remains useful.</p>
+</blockquote>
+<p>By the way, here is one handy tip. You can easily capture web articles by installing the Obsidian Web Clipper extension and configuring your inbox folder to be the target for the capture.</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_web_clipper_inbox.png" alt=""></p>
+<p>But how would we use that content? Let’s move on to the heart of this control center - the project workspace.</p>
+<h2 id="project-workspace">Project Workspace</h2>
+<p>The idea of a control center is that agents could work freely across projects, carrying over information as needed. We no longer need to provide paths or point to the exact project.</p>
+<p>Let’s give it a spin and show how this works by asking this question:</p>
+<pre><code class="language-text">Look at the concepts and ideas from the last capture. How can we apply them to improve the webinar sample project? Offer me 3 small technical options under the piecemeal growth mentality.
+</code></pre>
+<p>Something interesting will happen:</p>
+<p><img src="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/asset/unit_05_cross_project_suggestions.png" alt=""></p>
+<p>First of all, Codex went on and figured out which capture we were talking about and which project.</p>
+<p>Then it actually opened that project, oriented itself in it (nested progressive disclosure), loaded the product vision and figured out its structure.</p>
+<p>Finally, it tried to ground insights from the webinar in the nuances of the project and offered the next three potential improvements.</p>
+<p>Codex was able to do that because that other project is registered in this control center via a <code>03_apply/projects/ai_coding_sample1_webinars.md</code> file that points to the project checkout and contains the following information:</p>
+<pre><code class="language-md mod-src-excerpt"># Workshop Reservations
+
+- Checkout: `../ai_coding_sample1_webinars`, relative to this control center&#39;s root.
+- Purpose: the AI Native Code webinar sample, a workshop reservation application used to demonstrate working with coding agents.
+- Entry point: `AGENTS.md` in that checkout. Use its discovery instructions to find current product requirements, operating guidance, tools, and verification commands.
+
+## Adoption notes
+
+No practice adoption has been performed through this center yet. Existing project guidance remains in the project.
+</code></pre>
+<p class="mod-src-citation"><a class="mod-src-ref" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/05_apply_to_your_projects/src/03_apply/projects/ai_coding_sample1_webinars.md?lines=1-9">Source: 03_apply/projects/ai_coding_sample1_webinars.md, lines 1–9</a></p>
+<p>When I decide that some concept is worth adopting as reusable guidance across my projects, I’d put it in <code>03_apply/practices/</code>, with its source and where it applies.</p>
+<p>The source for this control center is attached to this unit. To connect it to the sample project you would need to:</p>
+<ol>
+<li>put them both into the same folder</li>
+<li>make sure that the webinar sample project folder is called <code>ai_coding_sample1_webinars</code> (or update the reference to it)</li>
+<li>make sure that your agent can go outside the current folder, or just live dangerously and give it “Full Access”.</li>
+</ol>
+<p>This setup now means that I can also ask Codex to register multiple projects there and start doing things like:</p>
+<ul>
+<li>Hey, Codex, link the project from folder X in this control center (where we could be linking to another project of ours or adding the source code of a project that inspires us)</li>
+<li>Look at project X and identify good solutions that match our engineering interests. What would you suggest adopting across our projects? Give me a numbered list.</li>
+<li>I like your suggestions 3 and 5. Research them a bit and add them as practices to this control center</li>
+<li>Go across our own projects and see where we can add practice 4 with minimal effort.</li>
+<li>Look at my old project Y. It is really stale and needs to be brought up to speed. Compare it to project G, identify key missing practices and give me a prioritized list of what should be done.</li>
+</ul>
+<p>You get the idea!</p>
+<h2 id="practical-exercise">Practical Exercise</h2>
+<p>I would suggest grabbing this control center, installing it locally, then doing the following exercises.</p>
+<ol>
+<li>Capture an interesting article about coding that you heard about recently. See how it gets ingested, inspect the card and follow one reference back to the source.</li>
+<li>Link a few projects of yours to the control center. Or at least ask your agent to download and check out a known good-quality open-source project. Then launch your agent from the control center and ask to see how the insights from the last captured article could be applied to one of the linked projects.</li>
+<li>Choose one suggestion and explain why it fits the project. Ask your agent to apply it, then review the change and run the relevant checks. Record what improved or why no change was needed. If you changed guidance or discovery, try a fresh session directly in that project to see whether the agent finds and uses it.</li>
+</ol>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/C4M01_codebase_for_agents/unit/04_turn_work_into_knowledge_and_tools">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules">Next</a></nav></div></main></body></html>
