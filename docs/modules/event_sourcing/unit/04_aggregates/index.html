@@ -1,0 +1,272 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>4. Aggregates — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">4. Aggregates</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 04</div><h1 id="mod-unit-title" class="ui-title">4. Aggregates</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s use a factory to explore how aggregates handle commands, record events and rebuild state.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>A quick way to understand aggregates that use <a href="/AI-pirate-bay/modules/event_sourcing/unit/02_event_sourcing_fundamentals">event sourcing</a> is to consider the following analogy.</p>
+<h2 id="commands-and-events">Commands and events</h2>
+<p>Imagine a car parts factory that is being managed by a director. This director <em>commands</em> this factory by sending instructions from his office down to the production floor. These instructions could be:</p>
+<ul>
+<li>recalibrate all machines;</li>
+<li>make that guy work 16 hours tomorrow;</li>
+<li>ship order to customer A. Now!</li>
+</ul>
+<p>Each <em>command</em> is carried over to the plant and executed by workers (as diligently as possible). As this happens, papers and memos are filled (since we need to inform the headquarters about what has happened). Each of these commands can have various outcomes, which depend on the <em>current state</em> of the plant.</p>
+<p>For example, when we send command to <em>recalibrate all machines</em>, we can get response that <em>all 10 machines were recalibrated</em>. Another response could be <em>5 machines were recalibrated, 3 were found to be broken and 2 were found to be missing</em>.</p>
+<p>Same with the other commands. When we try to make a worker work 16 hours he might agree or (if he is a Russian), he could just say some rich and powerful words to the management.</p>
+<p>When we are trying to ship all orders, one of the following sequence of <em>events</em> might happen:</p>
+<ul>
+<li><em>given</em> that all order items are prepared, orders get shipped;</li>
+<li><em>given</em> that some items are missing but can be replaced with equivalent parts, order gets shipped with some replaced parts and then also record about that replacement.</li>
+<li><em>given</em> that order can’t be fixed by replacing certain items, an apology gets written.</li>
+</ul>
+<p>Let’s bring in the analogies between an aggregate root and a factory:</p>
+<table>
+<thead>
+<tr>
+<th>Factory</th>
+<th>Aggregate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command to factory</td>
+<td>Command</td>
+</tr>
+<tr>
+<td>Given state of a factory</td>
+<td>Internal aggregate state</td>
+</tr>
+<tr>
+<td>Occurrence of some event</td>
+<td>Event</td>
+</tr>
+</tbody>
+</table>
+<h2 id="event-contracts">Event contracts</h2>
+<p>Let’s implement aggregate for this factory without using any external frameworks. First we define an interface for events. The snippets are illustrative; supporting types are omitted.</p>
+<pre><code class="language-csharp">public interface IEvent { }
+</code></pre>
+<p>We define contracts for our events (I’m using a <a href="http://code.google.com/p/lokad-message-contracts-dsl-sample/">VS T4+ANTLR Combo</a> here to avoid writing message contract classes by hand or bloating this post).</p>
+<p>Events would look like this:</p>
+<pre><code class="language-text">MachineAdded: IEvent(
+    Guid factory,
+    int machineId,
+    DateTime initialCalibrationDate,
+    double initialAccuracy)
+
+MachineRecalibrated: IEvent(
+    Guid factory,
+    int machineId,
+    DateTime calibrationDate,
+    double accuracy)
+
+MachineReportedStolen: IEvent (
+    Guid factory,
+    int machineId,
+    Guid policeReportNumber)
+
+MachineReportedBroken: IEvent (
+    Guid factory,
+    int machineId,
+    Guid incidentReportId)
+
+OrderShipped: IEvent(
+    Guid factory,
+    int orderId,
+    ShippingReport report)
+
+OrderCantBeShipped: IEvent (
+    Guid factory,
+    int orderId,
+    ShipDenialReport report)
+
+WorkerWorkShiftExtended: IEvent(Guid factory, int workerId, int hours)
+WorkerSentMessageToManagement: IEvent(Guid factory, int workerId, string message)
+WorkerRefusedToExtendShift: IEvent(Guid factory, int workerId)
+</code></pre>
+<h2 id="aggregate-behavior">Aggregate behavior</h2>
+<p>Given these events, let’s start by implementing an aggregate called <code>FactoryAggregate</code>. In the following method we hold all behaviors required to <em>recalibrate all factory machines</em>. Here we are taking a dependency on <code>IServiceGuy</code>.</p>
+<pre><code class="language-csharp">public void RecalibrateAllMachines(IServiceGuy guy)
+{
+    var id = _state.FactoryId;
+    foreach (var machine in _state.Machines.ToArray())
+    {
+        var report = guy.RecalibrateMachine(machine);
+
+        switch (report.State)
+        {
+            case CalibrationReport.Missing:
+                Apply(new MachineReportedStolen(id, machine.Id, report.Id));
+                break;
+            case CalibrationReport.Broken:
+                Apply(new MachineReportedBroken(id, machine.Id, report.Id));
+                break;
+            case CalibrationReport.Recalibrated:
+                Apply(new MachineRecalibrated(id, machine.Id, report.Date, report.Accuracy));
+                break;
+            default:
+                throw new UnsupportedReport(report);
+        }
+    }
+}
+</code></pre>
+<p>Here is how another method can be implemented:</p>
+<pre><code class="language-csharp">public void MakeWorkerPullLongShift(int workerId, int hours, IRussianCurseGenerator gen)
+{
+    var worker = _state.GetWorker(workerId);
+
+    if (worker.AgreesToPullHours(hours))
+    {
+        Apply(new WorkerWorkShiftExtended(_state.FactoryId, workerId, hours));
+    }
+    else
+    {
+        Apply(new WorkerRefusedToExtendShift(_state.FactoryId, workerId));
+    }
+
+    if (worker.IsEnraged &amp;&amp; worker.IsRussian)
+    {
+        var curses = gen.GenerateCurses(worker.RageLevel);
+        Apply(new WorkerSentMessageToManagement(_state.FactoryId, workerId, curses));
+        return;
+    }
+}
+</code></pre>
+<h2 id="aggregate-state">Aggregate state</h2>
+<p>We have 2 unknown items here: <code>_state</code> and <code>Apply</code>.</p>
+<p><code>_state</code> reflects the current state of things on the factory. <code>Apply</code> is used to record events while also updating this state.</p>
+<pre><code class="language-csharp">readonly FactoryState _state;
+readonly Action&lt;IEvent&gt; _addToUnitOfWork;
+
+public FactoryAggregate(Action&lt;IEvent&gt; addToUnitOfWork, FactoryState state)
+{
+    _addToUnitOfWork = addToUnitOfWork;
+    _state = state;
+}
+
+void Apply(IEvent @event)
+{
+    // Pass the event to state (and let it update itself)
+    _state.Apply(@event);
+    // Add event to the unit of work
+    _addToUnitOfWork(@event);
+}
+</code></pre>
+<p>The aggregate state should know how to apply given events.</p>
+<pre><code class="language-csharp">public sealed class FactoryState
+{
+    public Guid FactoryId { get; }
+    public MachineList Machines { get; } = new MachineList();
+    readonly MachineList _brokenMachines = new MachineList();
+
+    public FactoryState(Guid factoryId)
+    {
+        FactoryId = factoryId;
+    }
+
+    public void Apply(IEvent @event)
+    {
+        RedirectToWhen.InvokeEvent(this, @event);
+    }
+
+    public void When(MachineAdded e)
+    {
+        Machines.AddNew(e.MachineId, e.InitialCalibrationDate, e.InitialAccuracy);
+    }
+    public void When(MachineReportedStolen e)
+    {
+        Machines.Remove(e.MachineId);
+    }
+    public void When(MachineReportedBroken e)
+    {
+        var m = Machines[e.MachineId];
+        _brokenMachines.Add(m);
+        Machines.Remove(m);
+    }
+    public void When(MachineRecalibrated e)
+    {
+        var m = Machines[e.MachineId];
+        m.CalibrationDate = e.CalibrationDate;
+        m.Accuracy = e.Accuracy;
+    }
+
+    // Other state and handlers omitted.
+}
+</code></pre>
+<p>The <code>RedirectToWhen</code> helper is simple (<a href="https://gist.github.com/1047419">see gist</a>).</p>
+<p>Commands are executed against the aggregate. If needed, aggregate uses additional services. While executing commands, aggregate employs complex behaviors which are based on the current state. This execution results in changes to the state, which are expressed as events.</p>
+<h2 id="event-sourcing">Event sourcing</h2>
+<p>Let’s see how all these come together in a message handler that accepts command messages and passes them to the aggregate store.</p>
+<pre><code class="language-csharp">public void Consume(RecalibrateAllMachines cmd)
+{
+    var guy = _container.Resolve&lt;IServiceGuy&gt;();
+    _factoryRepository.Execute(cmd.FactoryId, c =&gt;
+    {
+        c.RecalibrateAllMachines(guy);
+    });
+}
+
+public void Consume(MakeWorkerPullLongShift cmd)
+{
+    var generator = _container.Resolve&lt;IRussianCurseGenerator&gt;();
+    _factoryRepository.Execute(cmd.FactoryId, c =&gt;
+    {
+        c.MakeWorkerPullLongShift(cmd.WorkerId, cmd.Hours, generator);
+    });
+}
+</code></pre>
+<p>Here’s how event sourcing works:</p>
+<pre><code class="language-csharp">public void Execute(Guid id, Action&lt;FactoryAggregate&gt; when)
+{
+    var streamName = &quot;factory-&quot; + id;
+    var givenEvents = _stream.ReadAllEvents(streamName);
+    // load state from the event history
+    // or, if you have snapshot, load it here first
+    // we will not do the latter here
+    var state = new FactoryState(id);
+    foreach (var e in givenEvents)
+    {
+        state.Apply(e);
+    }
+    var thenEvents = new List&lt;IEvent&gt;();
+    var ar = new FactoryAggregate(thenEvents.Add, state);
+    // execute actual command
+    when(ar);
+    // do something with the events that were produced.
+    // for example, append them to the history and then
+    // publish in async or do both at once and face 2PC
+    _stream.AppendEvents(streamName, thenEvents);
+}
+</code></pre>
+<p>We are not relying on any frameworks. <a href="/AI-pirate-bay/modules/event_sourcing/unit/07_versioning">Versioning and version checks</a> are not within the scope of this article, yet they could be added to the snippet above as needed.</p>
+<h2 id="creating-an-aggregate">Creating an aggregate</h2>
+<p>Event Stream for an aggregate is created by sending a command to the aggregate that does not exist. This command could look like:</p>
+<pre><code class="language-csharp">new CreateUserCommand
+{
+    Id = Guid.NewGuid(),
+    Name = registerModel.Name,
+    Login = registerModel.Login,
+    Password = registerModel.Password
+};
+</code></pre>
+<p>In the handler we could have:</p>
+<pre><code class="language-csharp">public void Consume(CreateUserCommand cmd)
+{
+    var service = _container.Resolve&lt;EmailCheckService&gt;();
+    _userRepository.CreateAndExecute(cmd.Id, c =&gt;
+    {
+        c.CreateNewUser(cmd.Id, cmd.Name, cmd.Login, cmd.Password, service);
+    });
+}
+</code></pre>
+<p>The only difference between <code>Execute</code> and <code>CreateAndExecute</code> methods is that the latter does not throw any exceptions if the stream does not exist before the call (and it might actually throw an exception if the stream <em>did</em> exist).</p>
+<blockquote>
+<p>In the advanced cases of user registrations we might want to start by creating a <code>RegistrationAggregate</code> (to track all associated information and the actual process of registration), that would then pass control to various instances of <code>CustomerAggregate</code>, <code>SecurityAccountAggregate</code> and <code>UserLoginAggregate</code>. These details depend on your domain and are subject to discussion with domain experts.</p>
+</blockquote>
+<h2 id="advanced-scenarios">Advanced scenarios</h2>
+<p>Above is a simplified approach to event sourcing that is generally described and explained in articles on the subject. The situation gets more interesting if:</p>
+<ul>
+<li>All messages (commands and events alike) carry unique identifier that is used at all steps of message processing to enforce message deduplication (required for repartitioning or cloud environment in general).</li>
+<li>Entity identities (i.e.: aggregate root identifiers) that are carried in the transport headers not only simplify our contracts (while still being exposed to the domain code in a decoupled way), but also provide simple foundation for message routing and aggregate repartitioning.</li>
+<li>We keep track of the message causality (event X was caused by command batch Y) in the transport headers along with client vectors. This provides us with the foundation to do partial message ordering (for the cases where cloud environments are stressed and tend to mess up order).</li>
+</ul>
+<h2 id="message-builders">Message builders</h2>
+<p>Sometimes our messages will be so large, that composing them via constructors would create fragile and non readable code. If such an instantiation happens too often for a single event, we can improve code readability in this specific case by introducing event builders.</p>
+<p>Event builder is a stateful class, which provides helpful and expressive syntax to create an instance of an event.</p>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/03_why_event_sourcing">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules/event_sourcing/unit/05_projections">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>

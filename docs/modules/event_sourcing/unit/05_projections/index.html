@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>5. Projections — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">5. Projections</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 05</div><h1 id="mod-unit-title" class="ui-title">5. Projections</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s derive read models from events, choose their storage and rebuild them as projections evolve.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>Projection is an important concept while building event centric systems.</p>
+<p><strong>Projection is about deriving current state from the stream of events</strong>.</p>
+<h2 id="projecting-a-read-model">Projecting a read model</h2>
+<p>For instance, consider a situation, where a stream of events is published out by a server to all subscribers. These events are related to user registrations and look like:</p>
+<pre><code class="language-text">UserAddedToAccount
+{
+    UserId = 150,
+    AccountId = 47,
+    Username = &quot;spam-me-not&quot;,
+    RegistrationToken = &quot;27fa3h...&quot;
+}
+
+UserVerifiedEmail
+{
+    UserId = 150,
+    Email = &quot;rinat.abdullin@gmail.com&quot;
+}
+
+UserRenamed
+{
+    UserId = 150,
+    NewName = &quot;abdullin&quot;
+}
+</code></pre>
+<p>We can attach a subscriber to stream of these events to project this stream into a persistent read model, used to serve user details in a Web UI.</p>
+<p>Final read model could look like:</p>
+<pre><code class="language-json">{
+  &quot;UserId&quot;: 150,
+  &quot;AccountId&quot;: 47,
+  &quot;Username&quot;: &quot;abdullin&quot;,
+  &quot;Email&quot;: &quot;rinat.abdullin@gmail.com&quot;,
+  &quot;RegistrationToken&quot;: &quot;27fa3h...&quot;
+}
+</code></pre>
+<p>Projection logic could look like this (in pseudocode):</p>
+<pre><code class="language-text">if (e is UserAddedToAccount)
+{
+    store.Save(new UserView
+    {
+        UserId = e.UserId,
+        AccountId = e.AccountId,
+        Username = e.Username,
+        RegistrationToken = e.RegistrationToken
+    });
+}
+if (e is UserVerifiedEmail)
+{
+    var view = store.Load&lt;UserView&gt;(e.UserId, Lock.Enforce);
+    view.Email = e.Email;
+    store.Update(view);
+}
+if (e is UserRenamed)
+{
+    var view = store.Load&lt;UserView&gt;(e.UserId, Lock.Enforce);
+    view.Username = e.NewName;
+    store.Update(view);
+}
+</code></pre>
+<p>This pseudocode is straightforward. It probably uses something like ORM to do the persistence.</p>
+<h2 id="storage-choices">Storage choices</h2>
+<p>There is an important concept behind this simplicity. <strong>Given the stream of events, we can project them to any structural representation</strong>. <em>Structural representation</em> here refers not only to the schema of a read model, but also to the implementation details of how this model is stored and accessed.</p>
+<p>Here are some possibilities:</p>
+<ul>
+<li>SQL database (MS SQL, MySQL, Postgres or any other relational database, including cloud counterparts like Azure SQL or Amazon RDS);</li>
+<li>NoSQL database (CouchDB, MongoDB, RavenDB or any other document database);</li>
+<li>No database (serialized files on a file system, including cloud counterparts of Amazon S3, Azure Cloud Storage or Rackspace CloudFiles);</li>
+<li>No persistence (in memory store, which is rebuilt from local event stream whenever server is rebooted).</li>
+</ul>
+<p>We are projecting new events to the read model as soon as they come in. In a sense such read models are a <strong>cache</strong> (one that is updated as soon as the change comes in).</p>
+<p>Now consider the fact that we can multiplex event stream and have multiple similar projections subscribed to it in parallel. This is the reason, why we can have <strong>scalability on read side</strong> with our projected read models.</p>
+<p>Another reason why projections are important: exactly the same concepts apply not only to the persistent read models, but also to <a href="/AI-pirate-bay/modules/event_sourcing/unit/04_aggregates">aggregate roots</a> implemented with event sourcing. <strong>An aggregate root can have its own private state, which is projected from the same events that it creates</strong>. These similarities help to make event centric distributed systems to look more simple and consistent.</p>
+<h2 id="terminology">Terminology</h2>
+<p><strong>Projecting</strong> is process of converting (or aggregating) a stream of events into a structural representation. This structural representation (which is being updated as we traverse the stream) can be called many names: persistent read model, view or a state.</p>
+<p>Process of projecting is executed by a set of <strong>event handlers</strong>, which essentially are just methods executed whenever a specific type of event comes in. These methods perform CRUD operation upon the persistent read model.</p>
+<p>For the convenience, we will be grouping all event handlers into <strong>projection classes</strong> based on the read model that they are working with.</p>
+<h2 id="simple-scenario">Simple scenario</h2>
+<p>Let’s explore writing and managing projections on a simplified scenario. It is based on assumption, that each read model is a single document that can be accessed and modified as a whole.</p>
+<p>For instance, in a simple task tracking system you could have following read models (which map to the screens in different UIs):</p>
+<ul>
+<li><code>TodoListView</code>: single document listing all tasks that are yet to be done</li>
+<li><code>TaskDetailView</code>: a document per task with all the details</li>
+<li><code>TasksPerDayView</code>: a document per day, that lists all tasks scheduled for a given day.</li>
+<li><code>TasksCompletedLastMonth</code>: a document of tasks that were completed last month.</li>
+</ul>
+<p>We can add new projections and reconstruct read models by running event history through.</p>
+<h2 id="atomic-updates">Atomic updates</h2>
+<p>The subtle moment here is the atomicity of the updates.</p>
+<p><code>IAtomicWriter</code> can be defined as:</p>
+<pre><code class="language-csharp">public interface IAtomicWriter&lt;in TKey, TEntity&gt;
+{
+    TEntity AddOrUpdate(TKey key, Func&lt;TEntity&gt; addFactory, Func&lt;TEntity, TEntity&gt; update);
+    bool TryDelete(TKey key);
+}
+</code></pre>
+<p>This is supported by the majority of persistence providers. Relational databases provide transactions, while NoSQL systems feature either conditional operations (as in “update if version is still X”) or provide direct support for simple atomic changes.</p>
+<h2 id="rebuilding">Rebuilding</h2>
+<p>Quite often you would want to change your projections or add completely new ones to the system. Obviously we would want to go back in time and make everything look like these changes were there since the beginning of time.</p>
+<p>This is where replaying events comes into play.</p>
+<p>In order to be able to do that, we should set up our system to record all passing events into a separate event log for the domain. This <strong>event log is completely separate from aggregate event streams</strong> (should these be used in the system). Its sole purpose is to simplify event replays for projections.</p>
+<p>To do that we simply add an additional subscriber that would listen to all events and append them to that log:</p>
+<pre><code class="language-csharp">if (!log.TryAppend(streamer.SaveEnvelopeData(message)))
+    throw new Exception(&quot;Failed to save to domain event log&quot;);
+</code></pre>
+<p>Whenever time comes to rebuild a certain projection, you could stop the system (this could be done without stopping, but the procedure would be a bit more complex then), drop all view models and then recreate them by pushing events through the projections once more.</p>
+<p>If you are using some simple persistence for your views (i.e.: documents, files or blobs), then the procedure could be simplified.</p>
+<ol>
+<li>Download latest domain event log (or simply sync local copy with the remote version)</li>
+<li>Manually wire up projections to use local store (files or even memory) for persisting view models. Normally this is done in a helper tool without any bus or messaging infrastructure. We just sequentially read messages from file and pass them to the manually constructed instances of projection classes.</li>
+<li>Once the rebuild is complete, upload views to the new container in production, overwriting the old views.</li>
+</ol>
+<p>This works for simple systems with low traffic, ones that can be stopped while we perform upgrades. However, if needed, an upgrade can be performed with zero (or little) downtime. It involves having parallel deployments for the client and projection hosts. We will have:</p>
+<ul>
+<li><code>ProjectionHost_v1</code>: a subsystem that projects incoming events to a store <code>Views-v1</code>. There will be a <code>Client-v1</code> (ie UI) configured to use <code>Views-v1</code>.</li>
+<li><code>ProjectionHost_v2</code>: a subsystem that uses store <code>Views-v2</code> but is currently empty. <code>Client-v2</code> will be configured to use that store.</li>
+<li>Load balancer will be configured to redirect all web requests to <code>Client-v1</code>.</li>
+</ul>
+<p>We perform upgrade by:</p>
+<ol>
+<li>Bring <code>ProjectionHost_v2</code> online and subscribe it to events queue (but do not consume yet, just keep in memory).</li>
+<li>Tell <code>ProjectionHost_v2</code> to run all events from the domain event log, and afterwards start consuming all events from the events queue (there is a subtle chance of message duplication here, that will be handled by the sliding cache).</li>
+<li>Once projection host catches up with all the events, we simply tell LoadBalancer to switch from <code>Client-v1</code> to <code>Client-v2</code>. Afterwards all <code>v1</code> elements could be dropped.</li>
+</ol>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/04_aggregates">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules/event_sourcing/unit/06_specifications">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>

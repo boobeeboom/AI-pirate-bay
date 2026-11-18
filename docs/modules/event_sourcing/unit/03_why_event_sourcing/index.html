@@ -1,0 +1,202 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>3. Why Event Sourcing? — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">3. Why Event Sourcing?</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 03</div><h1 id="mod-unit-title" class="ui-title">3. Why Event Sourcing?</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s go through the reasons to use event sourcing today: storage agnostic, flexibility, scalability and fits AI Native mentality really well.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>Event sourcing is about persisting data in a way that <em>preserves every single bit of information</em>. It’s about <strong>representing objects as a sequence of events</strong> that took place through the time and led them to the current state.</p>
+<p>For instance, if I were to persist information about my pocket money (i.e.: <code>100 EUR</code>), I could simply save the latest state somewhere in a variable or database:</p>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rinat</td>
+<td>100</td>
+</tr>
+</tbody>
+</table>
+<p>Now, whenever there is a change, we would overwrite this value with the new value (discarding the previous one). Then at some point in time we will have something like this written in the database:</p>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rinat</td>
+<td>67</td>
+</tr>
+</tbody>
+</table>
+<p>Simple and elegant (and works perfectly in a large number of scenarios). However, we are performing a logical compression here (lossy one) and discarding some information. Let’s see what would happen if we were to <strong>preserve all the changes</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Transaction</th>
+<th>Change</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Got from ATM</td>
+<td>100</td>
+<td>100</td>
+</tr>
+<tr>
+<td>Bought metro tickets</td>
+<td>-12</td>
+<td>88</td>
+</tr>
+<tr>
+<td>Grabbed a lunch</td>
+<td>-8</td>
+<td>80</td>
+</tr>
+<tr>
+<td>Found a coin</td>
+<td>1</td>
+<td>81</td>
+</tr>
+<tr>
+<td>Took taxi</td>
+<td>-14</td>
+<td>67</td>
+</tr>
+</tbody>
+</table>
+<p>Obviously, if we have such a sequence of events, we can always “reconstruct” the current balance, by doing a total:</p>
+<pre><code class="language-text">Balance: 100 - 12 - 8 + 1 - 14 = 67 EUR
+</code></pre>
+<p>In essence, the final state (Balance) is a <em>left-fold function</em> of the previous states (equivalent of <code>IEnumerable.Aggregate</code> in .NET, <code>std::accumulate</code> in C++ or <code>array.reduce</code> in JavaScript).</p>
+<p><em>What’s the point in storing all these intermediate steps, when you can just save the final balance?</em></p>
+<h2 id="benefits">Benefits</h2>
+<p>It all boils down to a few benefits of Event Sourcing:</p>
+<ul>
+<li>Sometimes we need to store changes <strong>to prove or explain what happened in the past</strong>. This is what banks do, for example.</li>
+<li>We want to <strong>scale our system out, improve its performance or availability</strong> by leveraging the transaction logs capabilities of an event stream. This is what databases do under the hood.</li>
+<li>We want to stick with the ideas of Domain-Driven Design, leverage benefits of Event Storming and in general <strong>align the codebase with the language of the customers and other stakeholders</strong>.</li>
+<li>We want to <strong><a href="/AI-pirate-bay/modules/event_sourcing/unit/06_specifications">write non-fragile unit tests for our system</a></strong> that verify business behaviors but avoid changing internal implementation details or even changing stacks.</li>
+</ul>
+<h2 id="agentic-coding">Agentic coding</h2>
+<p>That last reason is the most important of them all nowadays.</p>
+<p>I used Event Sourcing over the decades, mostly reaching out to it in cases of really complex business products and large teams. These benefits made it worthwhile in such projects.</p>
+<p>However today modern Agentic Coding tools shift the economics of software engineering a lot: <strong>manual coding becomes essentially free, provided humans take care of all the other aspects of software engineering, verification and product development</strong>.</p>
+<p>This lowers the barrier to using event sourcing in the projects and brings into the forefront its most valuable benefit: ability to <strong>capture business requirements into non-fragile and additive full-stack specs</strong>. This solves the pain of code drift between vibe-coded text specifications and similarly vibe-coded implementation.</p>
+<p>In the next module units, testability will be our primary focus.</p>
+<h2 id="storage-ignorance">Storage ignorance</h2>
+<p>It is easy to save data as a stream of events. All we need is to define POCO (<a href="http://en.wikipedia.org/wiki/Plain_Old_CLR_Object">Plain Old CLR Object</a>) classes (one for each event) and then serialize them to one of many formats available: Google ProtoBuf, JSON, Binary, XML etc.</p>
+<p>Define events:</p>
+<pre><code class="language-text">GotMoneyFromAtm! (amount, transaction, time)
+BoughtMetroTickets! (count, amount, machine, time)
+GrabbedALunch! (amount, cost, time, menu, place)
+FoundACoin! (amount, gps, time)
+TookTaxi! (amount, rideDuration, taxiCompany, route, time)
+</code></pre>
+<p>That’s how the definitions could look for C# language, if you used T4 of Visual Studio.</p>
+<h2 id="flexibility">Flexibility</h2>
+<p>Given the sequence of events, we can project them to any desired structural representation. For instance, we could write a <a href="/AI-pirate-bay/modules/event_sourcing/unit/05_projections">projection</a> that would summarize all our expenses and produce the latest balance.</p>
+<p>However, we can do much more:</p>
+<ul>
+<li>Generate list of cities, in which coins can be found most often.</li>
+<li>Get a list of taxi companies that are the cheapest ones or fastest ones.</li>
+<li>List TOP 5 favorite places for having a lunch on Monday.</li>
+</ul>
+<p>We don’t need any complex queries in order to do that. Try doing that if you have just a single field of Balance, or even if you had a list of changes (credit/debit).</p>
+<p>However, as long as you have a stream of events, you can project it to any form, even a conventional SQL database.</p>
+<h2 id="messaging-capabilities">Messaging capabilities</h2>
+<p>Events represent serializable and immutable data structures that are appended to an append only stream. As such, they share all the capabilities of messages. So we can:</p>
+<ul>
+<li>Multiplex them to multiple subscribers (i.e.: have a list of 5 last restaurants visited by Lady Gaga; while keeping that list up to date and continuously replicated around the globe to load balance the pressure of fans).</li>
+<li>Implement redundancy and reliability (i.e.: write events to 3 different locations at once, where we have 1 master and 2 slaves).</li>
+<li>Support load balancing (competing consumers) and parallel processing.</li>
+<li>Support incremental sync that fits in a few lines of code.</li>
+</ul>
+<p>Here are these lines of code from the production system (we are replicating from <code>remote</code> to <code>cache</code>):</p>
+<pre><code class="language-csharp">var next = _cache.GetCurrentVersion();
+
+while (true)
+{
+    var items = _remote.ReadRecords(next, BatchSize);
+    if (items.Length == 0)
+        break;
+
+    next = items.Max(m =&gt; m.Version);
+
+    _cache.AppendNonAtomic(items);
+    logger(string.Format(&quot;Loaded {0} records&quot;, items.Length));
+}
+</code></pre>
+<p>Of course, in a more conventional system (that does not employ event sourcing) you can leverage something like <a href="http://www.techrepublic.com/blog/howdoi/how-do-i-configure-transactional-replication-between-two-sql-server-2005-systems/123">SQL Replication</a> or <a href="http://msdn.microsoft.com/en-us/sync/bb821992">Microsoft Sync Framework</a>.</p>
+<h2 id="performance">Performance</h2>
+<p>Performance and scalability are byproducts of inherent capabilities offered by event sourcing:</p>
+<ul>
+<li>events can be published as soon as they happen;</li>
+<li>it is dead easy to precompute read models from the events (do a projection to some desired state);</li>
+<li>events can be processed in parallel;</li>
+<li>events can be multiplexed to multiple subscribers, where each one could maintain its own copy of some read model.</li>
+</ul>
+<blockquote>
+<p>What is a read model? “Balance” is one sample of a read model; “List of favorite Gaga’s restaurants” is another one. Essentially read model is some view (precomputed result of an SQL Query in SQL World).</p>
+</blockquote>
+<p>Since we have more flexibility with projecting events and passing them around, we can easily do more interesting things, reaching up to the speeds of LMAX (which was <a href="http://martinfowler.com/articles/lmax.html">described by Martin Fowler</a>):</p>
+<ul>
+<li>Keep read models (precomputed query results) directly in memory in some <a href="http://memcached.org/">MemCached</a> instances (if server goes down, we can always repopulate cache from the history of the events).</li>
+<li>Run multiple processing units in parallel (if any one goes down, switch to the backup).</li>
+<li>Benefit from the real time signal processing knowledge of robotics and critical systems (imagine, what could do an <a href="http://en.wikipedia.org/wiki/Field-programmable_gate_array">FPGA</a>/<a href="http://en.wikipedia.org/wiki/Application-specific_integrated_circuit">ASIC</a> optimized for parallel processing of events).</li>
+</ul>
+<h2 id="developer-s-life">Developer’s life</h2>
+<p>There are a few more interesting aspects of event sourcing:</p>
+<ul>
+<li>Simplifies deployment and maintenance (less SQL, upgrade scripts and versioning).</li>
+<li>Reduces expenses on both the hardware and software (no need to have extremely powerful and redundant servers or commercial databases).</li>
+<li>Integration between systems is more straightforward (all <a href="http://www.eaipatterns.com/">Enterprise Integration Patterns</a> apply here directly).</li>
+<li>Since no data is ever lost, we gain full audit (plus the ability to go back at any point in time) and excellent debugging capabilities.</li>
+<li>Event Sourcing is a natural fit for software developers that want to capture the essence of business domains (especially the most complex ones) while staying decoupled from platform complexity or hard performance issues.</li>
+<li>ES approaches help to provide clear answers to some of the new challenges brought to us by the market and technology: Cloud Computing, Big Data processing, Mobile and occasionally connected systems, real time business intelligence.</li>
+</ul>
+<p>There also are some <strong>financial and political benefits for project stakeholders</strong> to be interested in. They all revolve around the ability to have better flexibility in project delivery, managing resources and risks.</p>
+<p>Ability to keep things simple, defer important decisions and adapt business solutions can be a powerful enabler in large conservative organizations. Smaller companies (such as lean startups) can also gain more competitive advantage and reduce time to market with such approaches.</p>
+<p>Here we are getting into the area of synergy effects with CQRS/DDD methodologies and their practical application to distributed environments.</p>
+<h2 id="downsides">Downsides</h2>
+<p><strong>Event Sourcing is not a silver bullet</strong>. It is a different approach to think and represent changes and data. If you are a C# or C++ developer, then this feels like going back to assembler. If you are a project manager, it’s like consciously going back from Microsoft Project Server to task lists and custom budgeting software.</p>
+<p><strong>Defining these events is a complex art</strong> of its own, which requires skills in domain modeling (hint: if you have a lot of events with following words in their names, then you are doing something wrong: <code>Create</code>, <code>Insert</code>, <code>Update</code>, <code>Delete</code>, <code>Set</code>, <code>Change</code>, <code>Add</code>). Domain Driven Design (as both a book and a body of knowledge) is an entry point into this skill.</p>
+<h2 id="concerns">Concerns</h2>
+<p>There are a few additional concerns that might look like downsides of approach, but in fact are not that important.</p>
+<p><strong>Extra storage costs</strong> are usually negligible when compared to the business value that might be created.</p>
+<p><strong>Slower performance</strong> is not an issue, since we can optimize IO via snapshotting and persistent read models. And leveraging push based nature of events, we can get immediately invalidating caches. In short, there are multiple technical solutions that could be <em>plugged later</em>, if there is such need.</p>
+<p><strong>Fragility</strong> (losing an event in the past causes the entire stream to be corrupt) is not an issue, since you can determine yourself the levels of SLAs to go for (via replication and redundancy). Corruption in any single replica can be reliably detected using git’s approach: event includes SHA1 signature computed against its contents and signature of the previous event.</p>
+<p><strong><a href="/AI-pirate-bay/modules/event_sourcing/unit/07_versioning">Versioning</a></strong> is sometimes perceived as a problem, since our systems tend to grow and event contracts (schemas) can gradually evolve to new formats that are incompatible with the old saved events. Yet, if approached consciously this can be solved (and solution is more elegant and simple than SQL migration scripts). I use a combination of 3 elements here:</p>
+<ul>
+<li>Using <strong>serializer that is evolution friendly</strong> (i.e.: <a href="http://code.google.com/apis/protocolbuffers/">Google ProtocolBuffers</a> is not only among the fastest serializers, it also allows you to rename class members without breaking anything).</li>
+<li>Using <strong>in memory upgraders</strong> which are simple classes stacked on top of the event streams for replays and accessing history. They can split, merge, convert events or even fill in missing fields (if this data is available in the other events). Upgraders are just a lazy and quick replacement for rewriting the entire event stream history completely.</li>
+<li>Using <strong>careful event modeling</strong> (which is usually based on the Ubiquitous Language coming from DDD) to define events in a way that they will rarely change a lot (they will be based on concepts that do not change, no matter how their relations evolve).</li>
+</ul>
+<h2 id="further-reading">Further reading</h2>
+<p><strong>CQRS Info by Greg Young</strong>:</p>
+<ul>
+<li><a href="http://cqrs.wordpress.com/documents/events-as-storage-mechanism/">Events as a storage mechanism</a></li>
+<li><a href="http://cqrs.wordpress.com/documents/building-event-storage/">Building Event Storage</a></li>
+<li><a href="http://cqrs.wordpress.com/documents/cqrs-and-event-sourcing-synergy/">CQRS and Event Sourcing</a></li>
+</ul>
+<p><strong>A few of my own articles</strong>:</p>
+<ul>
+<li><a href="http://abdullin.com/journal/2011/6/26/event-sourcing-a-la-lokad.html">Event Sourcing a la Lokad</a></li>
+<li><a href="http://abdullin.com/journal/2010/9/17/scenario-based-unit-tests-for-ddd-with-event-sourcing.html">Scenario based Testing for Event Sourcing</a>.</li>
+</ul>
+<p><strong>Some more materials</strong>:</p>
+<ul>
+<li><a href="http://thinkbeforecoding.com/post/2009/11/02/Event-Sourcing-and-CQRS-Lets-use-it">Event Sourcing and CQRS, Let’s use it</a> by Jérémie Chassaing (recommended read for C# guys)</li>
+<li><a href="http://blog.jonathanoliver.com/2011/09/cqrs-eventstore-v3-0/">EventStore</a> framework for .NET by Jonathan Oliver.</li>
+<li><a href="http://distributedpodcast.com/">Distributed podcast</a>.</li>
+</ul>
+<h2 id="stories">Stories</h2>
+<p>As said by <em>Mike Nichols</em> in DDD/CQRS mailing list:</p>
+<blockquote>
+<p>My experience has been that ES and its promotion of business semantics over technological terms has a way of bending my mind toward modeling behaviors rather than essence.</p>
+<p>It also lets me avoid the ceremony of modeling state that doesn’t contribute to behaviors.</p>
+<p>I see this as a good thing and as a side effect I probably use language the business person understands more.</p>
+<p>I just can’t find a reason to use ORM in my domain anymore. ES seems to let me more rapidly model … having a change log/audit trail is about the furthest thing from my mind when I reach for it.</p>
+</blockquote>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/02_event_sourcing_fundamentals">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules/event_sourcing/unit/04_aggregates">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>

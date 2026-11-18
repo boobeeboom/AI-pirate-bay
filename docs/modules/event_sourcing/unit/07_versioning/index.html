@@ -1,0 +1,112 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>7. Versioning — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">7. Versioning</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 07</div><h1 id="mod-unit-title" class="ui-title">7. Versioning</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s evolve event contracts with compatible serializers and upgraders that preserve access to event history.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>How do we handle changes in event contracts: renaming fields, adding new members or even performing a complete refactoring?</p>
+<h2 id="contracts">Contracts</h2>
+<p><strong>Event contract</strong> is a definition of event, that could explain how to serialize some object into a transportable data structure and then rehydrate the object back. Usually contracts are defined as POCO classes. The same serialization mechanism applies to command contracts:</p>
+<pre><code class="language-csharp">[DataContract]
+public partial class RequestPaypalPayment : ICommand&lt;PaymentId&gt;
+{
+    [DataMember] public PaymentId Id { get; set; }
+    [DataMember] public InvoiceDefinition Definition { get; set; }
+    [DataMember] public Email Billing { get; set; }
+}
+</code></pre>
+<p>Logical meaning behind the contract (how the name is chosen, what fields are used etc) comes from the world of Domain Driven Design, applied to CQRS and Event sourcing.</p>
+<p>The problem comes from the fact, that it’s nearly impossible to get these contracts right from the first attempt in building a system. And even if you manage to, there is a significant chance that our own perception of domain model will change, creating the need to adjust the contract as well.</p>
+<p><strong>Contracts change</strong>. These changes can break our ability to read previously saved events (and previous history can easily go years back), or cause logical data corruption.</p>
+<p>Let’s go over various types of changes in contracts and ways to handle them.</p>
+<h2 id="minor-corrections">Minor corrections</h2>
+<p>The easiest kind of change to event contracts deals with correcting typos and changing naming of class members. All these are completely painless and transparent, if your contract serializer is evolution friendly.</p>
+<p>For instance, you can use Google ProtoBuf Serializer, which does not care about names, relying on integral tags instead. In .NET world POCO contract would look like:</p>
+<pre><code class="language-csharp">[ProtoContract]
+public partial class RequestPaypalPayment : ICommand&lt;PaymentId&gt;
+{
+    [ProtoMember(1)] public PaymentId Id { get; set; }
+    [ProtoMember(2)] public InvoiceDefinition Definition { get; set; }
+    [ProtoMember(3)] public Email Billing { get; set; }
+}
+</code></pre>
+<p>There is a trick with this serializer. Instead of using attributes from <code>ProtoBuf.dll</code>, you can leverage attributes of <code>DataContractSerializer</code>, which is a part of .NET BCL. This will make your contract libraries decoupled from non BCL code (reducing chance of dependency hell).</p>
+<pre><code class="language-csharp">[DataContract]
+public partial class RequestPaypalPayment : ICommand&lt;PaymentId&gt;
+{
+    [DataMember(Order = 1)] public PaymentId Id { get; set; }
+    [DataMember(Order = 2)] public InvoiceDefinition Definition { get; set; }
+    [DataMember(Order = 3)] public Email Billing { get; set; }
+}
+</code></pre>
+<p>From now on, when we will be talking about event contracts, <strong>simplified contract definition syntax</strong> will be used. For instance:</p>
+<pre><code class="language-text">PaypalPaymentReceived(PaymentId id, string paymentId, invoice, account, amount)
+</code></pre>
+<p>This explanatory syntax is not only more compact, but it could also be used to build actual contract classes for any platform, given a DSL parser.</p>
+<p>So the first type of changes to event contract deals with minor corrections (renaming members). Good serializer will handle this natively. If you don’t have such serializer, or the change is deeper, you can use in memory upgrader, discussed below.</p>
+<h2 id="enriching-events">Enriching events</h2>
+<p>More common versioning scenario with event contracts involves enriching events by adding new fields. Consider following event:</p>
+<pre><code class="language-text">UserDisabled(Guid id, string reason)
+</code></pre>
+<p>Imagine we have a system in production, that uses this event. However, at some point a request comes from the business to create a web view that would list names of disabled users for each account.</p>
+<p>There are multiple approaches to solve this problem. Some of them involve writing complex read models (capturing a wide variety of events in order to persist some additional info).</p>
+<p>However, it will be much easier if we were to publish this event:</p>
+<pre><code class="language-text">UserDisabled(Guid id, string reason, string name)
+</code></pre>
+<p>Given this definition, writing a view handler would be much easier. It is also quite easy to start publishing these events from the domain model. However, if we were to replay history to rebuild views, we would have events with <code>null</code> name.</p>
+<p>That’s where domain in memory upgraders come to the rescue. They are responsible for encapsulating this upgrade logic. Upgraders are defined like implementations of this interface:</p>
+<pre><code class="language-csharp">public interface IUpgradeDomainEvents
+{
+    IEnumerable&lt;IDomainEvent&gt; Upgrade(IDomainEvent @event, string messageId);
+    DateTime DefinedOn { get; }
+}
+</code></pre>
+<p>Where <code>DefinedOn</code> is the hard coded date on which this upgrader was implemented (this is used to order upgraders within the chain).</p>
+<p>Actual upgrade method returns an <code>IEnumerable</code> to handle cases, when a single event is split into multiple events, or when we are compressing multiple events into one.</p>
+<p>Implementations of these upgrade methods are usually located and distributed within the contracts library (so they are part of the schema). Any code (or a node in distributed system) that stores history events and reprocesses them later could easily locate and load these upgraders by a simple reflection.</p>
+<p>Potential implementation might look like:</p>
+<pre><code class="language-csharp">public class EnrichUserDisabled : IUpgradeDomainEvents
+{
+    readonly IDictionary&lt;Guid, string&gt; _userNames = new Dictionary&lt;Guid, string&gt;();
+
+    public DateTime DefinedOn
+    {
+        get { return new DateTime(2011, 10, 4); }
+    }
+
+    public IEnumerable&lt;IDomainEvent&gt; Upgrade(IDomainEvent e, string id)
+    {
+        // if this is event with info, capture it.
+        var named = e as UserNamed;
+        if (null != named)
+        {
+            _userNames[named.Id] = named.Name;
+            yield return e;
+            yield break;
+        }
+        // if this is target event, enrich it
+        var d = e as UserDisabled;
+        if (null != d)
+        {
+            if (string.IsNullOrEmpty(d.Name))
+            {
+                yield return new UserDisabled(d.Id, d.Reason, _userNames[d.Id]);
+                yield break;
+            }
+        }
+        // otherwise just pass it through
+        yield return e;
+    }
+}
+</code></pre>
+<p>Upgraders are a convenience shortcut that prevents views (or any other event consumers) from being “contaminated” by logic to handle versioning of event contracts and their upgrades.</p>
+<p>Since upgraders are a shortcut, we can discard them altogether. This is done by taking existing event streams, running them through the upgraders and overwriting source streams with results.</p>
+<h2 id="deep-refactoring">Deep refactoring</h2>
+<p>There are scenarios, when event has to be replaced completely or even split into multiple events.</p>
+<p>For example, after evolving our system, we might find out that <code>AccountRegisteredEvent</code> now becomes three distinct events:</p>
+<ul>
+<li><code>AccountCreatedEvent</code>;</li>
+<li><code>UserAddedEvent</code>;</li>
+<li><code>UserActivatedEvent</code>.</li>
+</ul>
+<p><code>IUpgradeDomainEvents</code> can handle such cases as well. You just return three different events in this case:</p>
+<pre><code class="language-text">yield return new AccountCreatedEvent(e.AccountId, ...);
+yield return new UserAddedEvent(userId, e.AccountId, ...);
+yield return new UserActivatedEvent(userId, e.AccountId, ...);
+</code></pre>
+<p>Upgrader approach can also be used to <strong>merge events</strong>, if necessary. You just need to push first event on the stack, when it comes, and then replace the second event with the result.</p>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/06_specifications">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules/event_sourcing/unit/08_event_storming">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>

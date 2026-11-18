@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>8. Event Storming — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">8. Event Storming</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 08</div><h1 id="mod-unit-title" class="ui-title">8. Event Storming</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s explore an Event Storming workshop, from preparation through the session to what happens afterwards.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p><strong>Event storming</strong> was invented by Alberto Brandolini. It is a collaborative workshop where people use colored sheets of paper, like Post it notes, to form a model of how an organization works or a business process runs, or to come up with an idea how to capture this model in software.</p>
+<video autoplay playsinline controls preload="none">
+    <source src="https://s3-eu-west-1.amazonaws.com/video.abdullin.com/av/av-02-event-storming-1080p-7cca7efa4cacc314c58415807e7f5fb4738a2d38.m4v" type="video/mp4">
+</video>
+<p><a href="https://s3-eu-west-1.amazonaws.com/video.abdullin.com/av/av-02-event-storming-1080p-7cca7efa4cacc314c58415807e7f5fb4738a2d38.m4v">Watch the 12 minute video</a></p>
+<h2 id="preparing-the-workshop">Preparing the workshop</h2>
+<p>It takes surprisingly little materials and supplies in order to run successfully.</p>
+<p><img src="/AI-pirate-bay/modules/event_sourcing/unit/08_event_storming/asset/20260909-event-storming-workshop-setup.png" alt=""></p>
+<p>You need:</p>
+<ul>
+<li>A sheet of paper.</li>
+<li>Masking tape that will be used to fix the paper to the walls and other surfaces.</li>
+<li>A chair.</li>
+</ul>
+<p>Ideally, that would be the only chair in the room, because event storming workshop is interactive, and we want people to be standing around our modeling surface instead of sitting down in the corner. On that chair we’ll put supplies: Post it notes and markers.</p>
+<p>In order to prepare for the workshop, we take our sheets of paper and fix them to the walls. We want to place a <strong>legend</strong>.</p>
+<p>Legend contains descriptions of what different kinds of Post it notes mean for the context of this workshop.</p>
+<p>There is a <a href="https://www.eventstorming.com/book/">book by Alberto Brandolini</a>. Ideally, all the people who are attending the workshop would at least be familiar with it.</p>
+<p>It is not a hard prerequisite. I’ve seen workshops being successful when nobody except for the facilitator knew what event storming is.</p>
+<h2 id="recording-domain-events">Recording domain events</h2>
+<p>We start by recording <strong>domain events</strong>, signified by <strong>orange Post it notes</strong>. A domain event describes something that happened in the past and that is important to the business.</p>
+<p>For an online shop, an important domain event could be:</p>
+<ul>
+<li>The user was created.</li>
+<li>The user put something in his shopping basket.</li>
+<li>The user proceeded to the checkout.</li>
+</ul>
+<p>The domain events are expressed in the past. When we start the workshop, ideally the facilitator will put a few well known domain events to the modeling surface so that people would not be scared of the big empty flat surface, to avoid writer’s block.</p>
+<p>We start putting domain events on the sheet of paper. The general convention is that there is a flow of time. It goes from the <strong>left to the right</strong>, and people should place their domain events wherever it makes sense for them. It can be messy in the beginning. The order will emerge. It is okay to move Post it notes, to group them together, or put them far.</p>
+<p><img src="/AI-pirate-bay/modules/event_sourcing/unit/08_event_storming/asset/20260909-event-storming-board-and-legend.png" alt=""></p>
+<p>If we find out that there is not enough modeling surface, it’s okay to start adding new sheets of paper.</p>
+<h2 id="problems-votes-and-ideas">Problems, votes and ideas</h2>
+<p>One more type of the Post it notes that could be used to facilitate the event storming workshop is a problem. It is signified by irritatingly bright Post it note that is fixed slightly off the angle, and it will signify the <strong>hotspot</strong>. For example, the discussion around some part of the business model can get stuck because people cannot agree on the name or they cannot figure out how to name the domain event.</p>
+<p>We can put these markers to tell people that we’re going to get back to that. Since these markers are irritating, people will eventually want to get rid of them and bring everything in good order.</p>
+<p>We can use <strong>thin strips of blue Post it notes</strong> to signify like, or vote, or some support. If everybody likes how domain event was phrased, or everybody thinks that it is very important, writing that domain event over and over again would take too much space.</p>
+<p>Event storming process is unpredictable. It can trigger a lot of ideas. People will come with their understanding of how business works, with problems, with ideas. We can offer them to use <strong>green Post it notes</strong> as potential ideas for improvement of the business or something that they want to be included in the model.</p>
+<h2 id="finding-structure">Finding structure</h2>
+<p>At some point it might make sense to start refactoring. For example, people have a cluster of domain events, and they want to clean it up and organize them better. It’s fine to take them from one sheet of paper and move to a different place and start working on them separately.</p>
+<p>As we move forward, some patterns might start emerging. For example, there are three large clusters of the business model on the primary worksheet, and there is a small cluster on additional sheet of paper.</p>
+<p>One of the reasons why event storming works so well is that probably people try to synchronize the abstract ideas that they have in their heads with the picture that they see on the wall.</p>
+<p>People that have seen the problem from different angles contribute to that model while trying to maintain order. That’s what makes it possible to start seeing a structure in the picture that you see in the end of the single event storming workshop.</p>
+<h2 id="bringing-in-the-right-people">Bringing in the right people</h2>
+<p><img src="/AI-pirate-bay/modules/event_sourcing/unit/08_event_storming/asset/20260909-event-storming-workshop-to-prototype.png" alt=""></p>
+<p>You need to invite the right people. You need a <strong>facilitator</strong>, somebody who is experienced in running this kind of workshops. He doesn’t have to be a domain expert, but he needs to know how to make the flow run smoothly, how to encourage people, how to resolve the problems, and how to prevent writer’s block.</p>
+<p>We also invite <strong>domain experts</strong>, people with the knowledge about the thing that we’re trying to understand and break down. It could be people working from the business, people from the marketing. This could be software engineers, because these are the folks that have tried to distill it in software.</p>
+<p>We remind everybody that we’re working on the big picture event storming exercise, where we try to make sense of the entire business. In this exercise we’re talking about the flow of time, and we arrange domain events along the timeline.</p>
+<p>Facilitator puts the first couple of domain events on the board to start the process. The people might say, “No, it’s not right,” or, “Yes, I know of one event,” and they start putting their pieces on the wall. When some people start expressing their ideas and shaping the domain, other people that are present in the room would also get their aha moments.</p>
+<p>They would realize better how things are working, and they would start putting more Post it notes.</p>
+<h2 id="after-the-workshop">After the workshop</h2>
+<ul>
+<li>
+<p>When we have a big picture, the next possible step is to <strong>iterate</strong>. We can take what we’ve learned from this exercise, clean up the whiteboard, or plan to meet next time, and build our model from the start.</p>
+</li>
+<li>
+<p>Another possible way to move forward is to <strong>focus on a single business process</strong>. This business process can span for the entire business involving multiple teams. We might want to invite these additional people into the room and focus on modeling this business process.</p>
+</li>
+<li>
+<p>Another possible way to move forward from the single event storming workshop is to take a business process that is already clearly understood, bottlenecks are understood, problems are understood, and try to <strong>model it in software</strong>.</p>
+</li>
+</ul>
+<h3 id="modeling-software">Modeling software</h3>
+<p>When we’re doing event storming workshop that focuses on software, we’ll be talking in terms of:</p>
+<ul>
+<li>Actors.</li>
+<li>User screens.</li>
+<li>Domain events that are getting published.</li>
+<li>Commands that are sent from the UI to the backend.</li>
+<li>Views which contain the <a href="/AI-pirate-bay/modules/event_sourcing/unit/05_projections">projected information</a> from the domain events and are used to help a user make a decision.</li>
+</ul>
+<h3 id="verifying-the-model">Verifying the model</h3>
+<p>Once we have some solid model, one of the possible ways to improve on that is to <strong>verify it</strong>. In software world, we usually verify by building a <strong>prototype or minimal viable product</strong>. This allows us to introduce more people and get more feedback, because we show the model in a different shape to the end users. They might have questions, and this information could be used further to refine the original model.</p>
+<p>If at any point we want to refine the model, ideal approach is to clean up all the sheets and start from scratch while keeping all the ideas, all the shared understanding, and potential shapes.</p>
+<p>See also <a href="/AI-pirate-bay/modules/event_sourcing/unit/02_event_sourcing_fundamentals">Fundamentals</a>.</p>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/07_versioning">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>

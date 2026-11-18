@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>6. Specifications — AI Native Code</title><link rel="stylesheet" href="/AI-pirate-bay/styles/app.css"><script defer src="/AI-pirate-bay/assets/offline.js"></script></head><body data-page-shell="plain"><header id="plain-topbar" class="cmp-topbar"><div class="_cmp-topbar-inner ui-gutter ui-measure-content"><a class="ui-wordmark" href="/AI-pirate-bay/" id="plain-product-name">AI Native Code</a> <nav class="cmp-topbar-actions" aria-label="Main"><a class="cmp-topbar-link" href="/AI-pirate-bay/modules">All Modules</a> <a class="cmp-topbar-link" href="/AI-pirate-bay/modules/current">Current Module</a><span class="cmp-topbar-link">Offline copy</span></nav></div></header><div id="mod-context" class="cmp-context-bar"><div class="_cmp-context-bar-inner ui-gutter ui-measure-content"><nav class="cmp-context-bar-crumbs"> <a class="ui-chrome" href="/AI-pirate-bay/modules">Modules</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <a class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing">Event Sourcing</a><span class="_cmp-context-bar-separator" aria-hidden="true">/</span> <span class="cmp-context-bar-here">6. Specifications</span></nav></div></div> <main id="mod-unit" class="ui-main ui-measure-read" data-product-case="Guest reads a Public Unit"><div class="_mod-unit-document ui-frame"><header id="mod-unit-header"><div id="mod-unit-num" class="ui-fact">Unit 06</div><h1 id="mod-unit-title" class="ui-title">6. Specifications</h1><p id="mod-unit-summary" class="ui-gloss">Let&#39;s express business behavior as specifications, keep tests stable and turn them into readable documentation.</p></header><section id="mod-unit-access" class="loaded"><article id="mod-unit-body" class="ui-prose"><p>When you hear about <a href="/AI-pirate-bay/modules/event_sourcing/unit/03_why_event_sourcing">Event Sourcing</a>, one of the mentioned advantages is ability to write expressive and non fragile tests. This is done via specifications.</p>
+<p><strong>Specification</strong> is a scenario that says: <strong>Given</strong> some preconditions, <strong>When</strong> something happens, <strong>Expect</strong> this.</p>
+<p>Specifications are a flexible way to express and verify certain behaviors. If you are developing with Microsoft .NET, check out a sample of generic Specifications framework <a href="https://github.com/gregoryyoung/Simple.Testing">SimpleTesting</a> by <a href="http://twitter.com/#!/gregyoung">Greg Young</a>.</p>
+<p>Specifications can be bound and executed via any unit testing engine (or using stand alone runners). For NUnit bindings, see <a href="https://gist.github.com/1109611">snippet</a> by <a href="http://twitter.com/#!/yevhen">Yevhen Bobrov</a>.</p>
+<h2 id="testing-aggregates">Testing aggregates</h2>
+<p>Specifications act as a natural way to test complex business logic, which is <a href="http://abdullin.com/journal/2011/6/26/event-sourcing-a-la-lokad.html">implemented with CQRS+ES way</a>. This happens because behaviors in <a href="/AI-pirate-bay/modules/event_sourcing/unit/04_aggregates">aggregates</a> are coded like:</p>
+<ul>
+<li><strong>Given</strong> certain events in the past (used to rebuild the state)</li>
+<li><strong>When</strong> a command is passed</li>
+<li><strong>Generate</strong> certain events.</li>
+</ul>
+<p>We can test any single command in various scenarios, by providing preconditions (events that happened before) and comparing produced results with the expected ones.</p>
+<p>In certain cases we might also need to provide test setups and teardowns within the specification. For instance, if aggregate uses some sort of <code>MyOverridableTime</code> static class to retrieve time in a testable way (and record it in an event), we could handle the situation like this:</p>
+<pre><code class="language-csharp">public Specification Creating_customer_opens_bill = new CustomerSpec
+{
+    Before = () =&gt; MyOverridableTime.DateIs(2011, 10, 6),
+    When = new CreateCustomer(cust, &quot;Northwind&quot;),
+    Expect =
+    {
+        new CustomerCreated(cust, &quot;Northwind&quot;),
+        new CustomerBillOpened(cust, 1, Date(2011, 10, 6))
+    },
+    Finally = MyOverridableTime.Reset
+};
+</code></pre>
+<h2 id="more-complex-scenarios">More complex scenarios</h2>
+<p>Sometimes, simple field based specification syntax is not flexible enough for our needs. Or it can create a messy code.</p>
+<p>In this case you can define specifications in methods that return either an instance of <code>Specification</code> or <code>IEnumerable&lt;Specification&gt;</code>.</p>
+<p>You can also use builders (either a stand alone class or a method within the specification suite) to reduce repetitive code in your unit tests.</p>
+<p>If you want to push the scenario even further (<em>at the cost of higher fragility</em>), you can actually record <strong>Given</strong>, <strong>When</strong>, <strong>Then</strong> using some textual serialization. This would create a text file per specification. Then, while running unit tests, simply enumerate all files in a directory (or resources in an assembly), building a specification for each one.</p>
+<h2 id="low-fragility">Low fragility</h2>
+<p>Lower fragility of specifications (for instance, compared to unit testing business logic bound to the database) comes from the fact that we are using <a href="http://domaindrivendesign.org/node/132">Ubiquitous Language</a> to express behaviors of the subject under test. While doing that, we don’t couple our tests with the actual implementations of these behaviors. For all we know, inner code can be wildly refactored, completely changing everything. Yet, as long as the behaviors stay the same, we don’t care.</p>
+<p>Another reason for lower unit test fragility: behaviors are expressed as messages which are structured around real world language of the problem domain. This language does not change often. In fact, it requires a small revolution in order for this to happen.</p>
+<blockquote>
+<p>Events would still change, though. Although language doesn’t really change, our understanding of it can evolve. I wrote an article about <a href="/AI-pirate-bay/modules/event_sourcing/unit/07_versioning">versioning event contracts</a>.</p>
+</blockquote>
+<h2 id="specifications-as-living-documentation">Specifications as living documentation</h2>
+<p>If you have a specification, you can easily and automatically convert it into a readable scenario document (SimpleTesting has a snippet showing how to achieve that).</p>
+<pre><code class="language-text">Creating customer opens bill: Passed
+
+Date Is(2011, 10, 6)
+
+When: Create customer 'Northwind' with id 7
+
+Expectations:
+  [Passed] Created customer 7 'Northwind'
+  [Passed] Opened bill 7/1 from 20111006
+</code></pre>
+<p>The trick that creates all these readable lines is about using <code>.ToString()</code> of each message (or any other equivalent).</p>
+<p>You can print out your entire unit test suite and then verify it with the business team. If you are delivering a project, acceptance can sign these scenario specifications (saying that they agree with how unit tests are run).</p>
+<p>These specifications (in their textual form) can be written by a business team. Then you can have a junior developer to convert them into the code. Another developer can start working on implementing the business logic in an aggregate. You could measure progress of this developer by calculating <code>implementedSpecifications / totalSpecifications</code>.</p>
+<p>While developer is coding in behaviors (which can be quite complex), another team can be working on UI and projections.</p>
+<h2 id="reusing-specifications-to-test-contracts">Reusing specifications to test contracts</h2>
+<p>Message contracts (both commands and events) are not fragile. Yet serializing them can yield unexpected results, especially if you are switching between different serializers.</p>
+<p>I used to verify (occasionally) contract serialization stability by creating unit tests that fill some objects with data, roundtrip via serializer and then compare results. This approach had some issues:</p>
+<ul>
+<li>not all messages are covered;</li>
+<li>tedious to create every single case of valid data.</li>
+</ul>
+<p>However, if we are using CQRS+ES and Specifications for testing, there is a better way. We just need to scan the unit test assembly for all specifications available. Grab them, but do not execute. Instead, just aggregate all messages that ever were passed into <code>Given</code>, <code>When</code> or <code>Expect</code>. You have a few populated message objects for each contract. Just roundtrip them through your favorite serializers to see compatibility issues in advance.</p>
+<p>Comparison code can be as simple as:</p>
+<pre><code class="language-csharp">[TestCaseSource(&quot;ListMessages&quot;)]
+public void GoogleProtoBuf(IEnumerable&lt;object&gt; msgs)
+{
+    foreach (var exp in msgs)
+    {
+        var actual = Serializer.DeepClone(exp);
+        var compare = CompareObjects.FindDifferences(exp, actual);
+        if (!string.IsNullOrWhiteSpace(compare))
+        {
+            Assert.Fail(compare);
+        }
+    }
+}
+</code></pre>
+<p>Where <code>CompareObjects</code> is a plug to <a href="http://comparenetobjects.codeplex.com/">CompareObjects.NET</a> (many thanks for <a href="http://twitter.com/#!/yreynhout">Yves Reynhout</a> for pointing this project).</p>
+<h2 id="event-comparison">Event comparison</h2>
+<p>There are multiple approaches to compare events, while validating specifications. I usually perform deep comparison of event objects by using CompareObjects.NET.</p>
+<p>If the events are different, then the actual member by member diff result might look too complicated for a human being to understand with a single glance.</p>
+<p>What we can do is to replace this output with <code>ToString</code> representations, which usually have a human readable <code>string.Format</code> in them.</p>
+<p>However, it could happen, that both string representations are equivalent (i.e. there are no <code>ToString</code> overloads, or difference is detected in a field that is not presented within the string). Then we need to fall back to the usual diff produced by <code>CompareObjects</code>.</p>
+<p>If you find yourself seeing a lot of member by member diffs, then this might be a symptom that your text representations of events could be refactored to reflect events better.</p>
+<h2 id="redirecting-context-explain">Redirecting <code>Context.Explain</code></h2>
+<p>Use <code>Context.Explain</code> to capture and annotate business decisions.</p>
+<p>We can capture that information while running our specification. This will make our specifications more understandable for developers (while debugging and fixing tests) and to business people (while reviewing specifications).</p>
+<p>If you are using some logger (as a framework or an abstraction), you can achieve the same with slightly more complicated code. Just make sure, that running tests in parallel will not intermix their outputs between each other.</p>
+</article></section><nav id="mod-unit-sequence" aria-label="Module Unit sequence"><a id="mod-unit-prev" class="ui-chrome" href="/AI-pirate-bay/modules/event_sourcing/unit/05_projections">Previous</a><a id="mod-unit-next" class="ui-chrome ui-lead" href="/AI-pirate-bay/modules/event_sourcing/unit/07_versioning">Next</a></nav></div></main><footer class="ui-footer ui-gutter ui-measure-content"><p>&copy; <a href="https://abdullin.com">Rinat Abdullin</a></p><nav aria-label="Footer"><a href="/AI-pirate-bay/testimonials">Testimonials</a> <a href="/AI-pirate-bay/doc/privacy_policy">Privacy Policy</a> <a href="/AI-pirate-bay/doc/terms_of_service">Terms &amp; Conditions</a></nav></footer></body></html>
